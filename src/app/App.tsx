@@ -761,19 +761,32 @@ export default function App() {
                         const isPrimary  = primaryStrap === o.id;
                         const extraCount = extraStraps.filter((x) => x === o.id).length;
                         return (
-                          <div key={o.id} className="relative flex flex-col items-center gap-1 w-[60px]">
-                            <button type="button" title="Set as main strap" onClick={() => setPrimaryStrap(o.id)}
-                              className={`relative rounded-full size-[50px] transition-all flex-shrink-0 ${isPrimary ? "ring-2 ring-offset-2 ring-[#111]" : "ring-1 ring-black/10 hover:ring-black/30"}`}
-                              style={{ background: o.color, boxShadow: "inset 0px -2.9px 5.8px rgba(0,0,0,0.08), inset 0px 2.9px 5.8px rgba(255,255,255,0.18)" }}>
-                              {isPrimary && <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-2 rounded-full bg-white shadow ring-1 ring-black/30" />}
-                            </button>
-                            <button type="button" title="Add as extra strap" onClick={(e) => { e.stopPropagation(); addExtraStrap(o.id); }}
-                              className="absolute top-0 right-0 min-w-[18px] h-[18px] px-1 rounded-full bg-white border border-[#ded9d1] text-[#333] flex items-center justify-center hover:bg-[#111] hover:text-white hover:border-[#111] transition-all shadow-sm"
-                              style={{ fontSize: 10, fontWeight: 800 }}>
-                              {extraCount > 0 ? <span style={{ fontSize: 8 }}>+{extraCount}</span> : "+"}
-                            </button>
+                          <div key={o.id} className="flex flex-col items-center gap-1.5" style={{ width: 64 }}>
+                            <div className="relative">
+                              <button
+                                type="button"
+                                title="Set as main strap"
+                                onClick={() => setPrimaryStrap(o.id)}
+                                className={`relative rounded-full size-[50px] transition-all flex-shrink-0 ${isPrimary ? "ring-2 ring-offset-2 ring-[#111]" : "ring-1 ring-black/10 hover:ring-black/30"}`}
+                                style={{ background: o.color, boxShadow: "inset 0px -2.9px 5.8px rgba(0,0,0,0.08), inset 0px 2.9px 5.8px rgba(255,255,255,0.18)" }}
+                              >
+                                {isPrimary && <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-2 rounded-full bg-white shadow ring-1 ring-black/30" />}
+                              </button>
+                              {extraCount > 0 && (
+                                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-[#111] text-white flex items-center justify-center px-1 pointer-events-none" style={{ fontSize: 8, fontWeight: 800 }}>
+                                  {extraCount}
+                                </span>
+                              )}
+                            </div>
                             <span className="uppercase text-[#181612] text-center leading-tight" style={{ fontSize: 10, fontWeight: 600 }}>{o.label}</span>
-                            {isPrimary && <span className="text-[#8a8275] uppercase -mt-0.5" style={{ fontSize: 8, fontWeight: 700 }}>Main</span>}
+                            <button
+                              type="button"
+                              onClick={() => addExtraStrap(o.id)}
+                              className="w-full py-1 rounded-full border border-[#ded9d1] bg-white text-[#333] hover:bg-[#111] hover:text-white hover:border-[#111] transition-all"
+                              style={{ fontSize: 9, fontWeight: 700 }}
+                            >
+                              + Add
+                            </button>
                           </div>
                         );
                       })}
