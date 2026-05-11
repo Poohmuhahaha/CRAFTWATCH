@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(bun run *)",
-      "Bash(vercel *)"
+      "Bash(vercel *)",
+      "Bash(Get-Content \"D:\\\\PROJECTS\\\\web-app\\\\WATCH\\\\src\\\\app\\\\App.tsx\")",
+      "Bash(Select-Object -Last 120)",
+      "PowerShell(\\(Get-Content \"D:\\\\PROJECTS\\\\web-app\\\\WATCH\\\\src\\\\app\\\\App.tsx\"\\) | Select-Object -First 50 | Select-Object -Last 10)",
+      "Bash(awk NR==861 *)",
+      "Bash(python3 *)",
+      "PowerShell(Get-Content *)"
     ]
   }
 }

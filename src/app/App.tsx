@@ -516,9 +516,8 @@ export default function App() {
   const [showReview,    setShowReview]    = useState(false);
   const [showSuccess,   setShowSuccess]   = useState(false);
 
-  const fileRef      = useRef<HTMLInputElement>(null);
-  const dialImageRef = useRef<string | null>(null);
-
+  const fileRef           = useRef<HTMLInputElement>(null);
+  const dialImageRef      = useRef<string | null>(null);
   useEffect(() => { return () => { if (dialImageRef.current) URL.revokeObjectURL(dialImageRef.current); }; }, []);
 
   const imageUploaded = !!dialImage;
@@ -598,18 +597,18 @@ export default function App() {
     <>
       <Navbar />
 
-      {/* ── Split-panel layout: right side scrolls, left side is static ── */}
+      {/* ── Page layout: left sticky, right flows with page scroll ── */}
       <div
-        className="w-full lg:overflow-hidden flex flex-col"
-        style={{
-          background: "radial-gradient(ellipse at top left, #ffffff 0%, #f6f3ee 42%, #e8e2d8 100%)",
-          height: "calc(100vh - 64px)",
-        }}
+        className="w-full"
+        style={{ background: "#F2EEE8" }}
       >
-        <div className="flex-1 min-h-0 mx-auto w-full max-w-[1280px] pt-[40px] px-6 lg:px-8 flex flex-col lg:flex-row gap-0 lg:gap-8">
+        <div className="mx-auto w-full max-w-[1280px] px-6 lg:px-8 flex flex-col lg:flex-row gap-0 lg:gap-8">
 
-          {/* ── LEFT: static watch panel ── */}
-          <div className="hidden lg:flex lg:w-[46%] flex-shrink-0 h-full flex-col items-center gap-10">
+          {/* ── LEFT: sticky watch panel ── */}
+          <div
+            className="hidden lg:flex lg:w-[46%] flex-shrink-0 flex-col items-center gap-10 py-10 pt-20"
+            style={{ position: "sticky", top: 64, height: "calc(100vh - 64px)", alignSelf: "flex-start" }}
+          >
             <div className="text-center">
               <h1 className="text-[#141414] tracking-[-1.5px]" style={{ fontSize: 28, fontWeight: 800 }}>Build Your Watch</h1>
               <p className="text-[#9e9e9e] mt-0.5" style={{ fontSize: 13 }}>Configure every detail, preview in real time.</p>
@@ -635,12 +634,9 @@ export default function App() {
             </button>
           </div>
 
-          {/* ── RIGHT: menu panel (sections scroll, button pinned at bottom) ── */}
-          <div className="lg:w-[54%] flex-shrink-0 h-full flex flex-col lg:pr-1">
-
-            {/* Scrollable sections area — outer handles scroll, inner handles layout */}
-            <div className="flex-1 min-h-0 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" }}>
-            <div className="flex flex-col gap-3 pb-6 lg:pb-8">
+          {/* ── RIGHT: natural page flow ── */}
+          <div className="lg:w-[54%] flex-shrink-0 lg:pr-1">
+            <div className="flex flex-col gap-3 pt-20 pb-4 lg:pt-20">
 
             {/* Mobile: watch preview at top */}
             <div className="flex lg:hidden flex-col items-center gap-4 pb-4">
@@ -659,15 +655,15 @@ export default function App() {
               </div>
             </div>
 
-            <Section title="Case Size" hint="Single choice">
+            <Section title="Case Size">
               <PillRow options={CASE_SIZES} value={caseSize} onChange={setCaseSize} />
             </Section>
 
-            <Section title="Case Color" hint="Single choice">
+            <Section title="Case Color">
               <SwatchRow options={CASE_COLORS} value={caseColor} onSelect={setCaseColor} />
             </Section>
 
-            <Section title="Dial Face" hint="Single choice">
+            <Section title="Dial Face">
               <div className="bg-[#fafafa] border border-[#e9eaeb] rounded-full p-1 flex w-full mb-4">
                 {(["color", "upload"] as const).map((t) => (
                   <button key={t} type="button" onClick={() => setDialTab(t)}
@@ -703,7 +699,7 @@ export default function App() {
               )}
             </Section>
 
-            <Section title="Hour Marker Type" hint="Single choice">
+            <Section title="Hour Marker Type">
               <div className={imageUploaded ? "opacity-60 pointer-events-none" : ""}>
                 <div className="flex flex-wrap items-start gap-3">
                   {[
@@ -733,22 +729,22 @@ export default function App() {
               {imageUploaded && <p className="mt-3 text-[#9e9e9e]" style={{ fontSize: 13 }}>Locked to <strong>Empty</strong> while a dial image is active.</p>}
             </Section>
 
-            <Section title="Hour Marker Colors" hint="Single choice">
+            <Section title="Hour Marker Colors">
               <div className={imageUploaded ? "opacity-60 pointer-events-none" : ""}>
                 <SwatchRow options={METAL_COLORS} value={markerColor} onSelect={setMarkerColor} disabledIds={disabledMetalColors} />
               </div>
               {imageUploaded && <p className="mt-2 text-[#9e9e9e]" style={{ fontSize: 13 }}>Not shown with a custom dial image.</p>}
             </Section>
 
-            <Section title="Hands Color" hint="Single choice">
+            <Section title="Hands Color">
               <SwatchRow options={METAL_COLORS} value={handsColor} onSelect={setHandsColor} disabledIds={disabledMetalColors} />
             </Section>
 
-            <Section title="Seconds Hand Color" hint="Single choice">
+            <Section title="Seconds Hand Color">
               <SwatchRow options={SECONDS_COLORS} value={secondsColor} onSelect={setSecondsColor} />
             </Section>
 
-            <Section title="Strap" hint="Main + optional extras">
+            <Section title="Strap">
               <div className="flex flex-col gap-1">
                 {STRAP_GROUPS.map((group, gi) => (
                   <div key={group.id} className={`flex flex-col gap-3 pt-3 pb-4 ${gi < STRAP_GROUPS.length - 1 ? "border-b border-dashed border-[#d8cfbc]" : ""}`}>
@@ -835,25 +831,25 @@ export default function App() {
               </div>
             </Section>
 
-            </div>{/* end flex layout */}
-            </div>{/* end scroll container */}
+            </div>{/* end sections */}
 
-            {/* ── Pinned Order Now button — footer of the menu panel ── */}
-            <div className="flex-shrink-0 pt-3 pb-6 pt-6" style={{ background: "linear-gradient(to top, rgba(232,226,216,1) 55%, rgba(232,226,216,0) 100%)" }}>
-              <button
-                type="button"
-                onClick={() => setShowReview(true)}
-                className="w-full rounded-full bg-[#111] text-white hover:bg-[#2a2a2a] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
-                style={{ fontSize: 15, fontWeight: 700, letterSpacing: "0.03em", height: 52 }}
-              >
-                <span>Review &amp; Order</span>
-                <span className="bg-white/15 px-3 py-1 rounded-full" style={{ fontSize: 14, fontWeight: 800 }}>${totalPrice}</span>
-              </button>
+            {/* Sticky Review & Order — scrolls with page, stops at column bottom before Footer */}
+            <div className="sticky bottom-0 z-10">
+              <div className="pb-12" style={{ background: "#F2EEE8", borderTopLeftRadius: 32, borderTopRightRadius: 32 }}>
+                <button
+                  type="button"
+                  onClick={() => setShowReview(true)}
+                  className="w-full rounded-full bg-[#111] text-white hover:bg-[#2a2a2a] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                  style={{ fontSize: 15, fontWeight: 700, letterSpacing: "0.03em", height: 52 }}
+                >
+                  <span>Review &amp; Order</span>
+                  <span className="bg-white/15 px-3 py-1 rounded-full" style={{ fontSize: 14, fontWeight: 800 }}>${totalPrice}</span>
+                </button>
+              </div>
             </div>
-
-          </div>
-        </div>
-      </div>
+          </div>{/* end RIGHT */}
+        </div>{/* end columns */}
+      </div>{/* end background */}
 
       <Footer />
 
