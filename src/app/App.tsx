@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { Upload, X, RotateCcw, Info, Plus } from "lucide-react";
 import svgPaths from "../imports/Section-1-1/svg-n6f01f9iwu";
 import confetti from "canvas-confetti";
@@ -527,7 +527,7 @@ export default function App() {
   const watchAnimRef2    = useRef<HTMLDivElement>(null);
   const sizeAnimMountRef = useRef(true);
   const prevSizeValRef   = useRef(Number(caseSize));
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (sizeAnimMountRef.current) { sizeAnimMountRef.current = false; return; }
     const prevStr = String(prevSizeValRef.current);
     const renderedW = (size: string, sc: number) =>
@@ -535,10 +535,11 @@ export default function App() {
     const animate = (ref: React.RefObject<HTMLDivElement | null>, sc: number) => {
       if (!ref.current) return;
       const s = 1 + (renderedW(prevStr, sc) / renderedW(caseSize, sc) - 1) * 0.5;
+      ref.current.style.transformOrigin = "50% 42%";
       ref.current.style.transition = "none";
       ref.current.style.transform  = `scale(${s})`;
       void ref.current.offsetHeight;
-      ref.current.style.transition = "transform 0.18s ease-out";
+      ref.current.style.transition = "transform 0.22s ease-out";
       ref.current.style.transform  = "scale(1)";
     };
     prevSizeValRef.current = Number(caseSize);
@@ -750,7 +751,7 @@ export default function App() {
               <p className="text-[#9e9e9e] mt-0.5" style={{ fontSize: 13 }}>Configure every detail, preview in real time.</p>
             </div>
 
-            <div className="relative w-full flex justify-center">
+            <div className="flex-1 relative flex justify-center items-start overflow-visible">
               <div ref={watchAnimRef1}>
                 <WatchPreview
                   caseColor={caseColorHex}
