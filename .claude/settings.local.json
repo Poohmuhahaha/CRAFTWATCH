@@ -8,7 +8,10 @@
       "PowerShell(\\(Get-Content \"D:\\\\PROJECTS\\\\web-app\\\\WATCH\\\\src\\\\app\\\\App.tsx\"\\) | Select-Object -First 50 | Select-Object -Last 10)",
       "Bash(awk NR==861 *)",
       "Bash(python3 *)",
-      "PowerShell(Get-Content *)"
+      "PowerShell(Get-Content *)",
+      "Bash(npm run *)",
+      "Bash(npx vite *)",
+      "Bash(node_modules/.bin/tsc --noEmit)"
     ]
   }
 }

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Upload, X, RotateCcw } from "lucide-react";
+import { Upload, X, RotateCcw, Info, Plus } from "lucide-react";
 import svgPaths from "../imports/Section-1-1/svg-n6f01f9iwu";
 import confetti from "canvas-confetti";
 import { Tooltip, TooltipTrigger, TooltipContent } from "./components/ui/tooltip";
@@ -39,7 +39,6 @@ const DIAL_COLORS: Swatch[] = [
 
 const HOUR_MARKER_TYPES: Pill[] = [
   { id: "arabic", label: "Arabic" },
-  { id: "i-xii",  label: "I-XII" },
   { id: "roman",  label: "Roman" },
   { id: "dots",   label: "Dots" },
   { id: "empty",  label: "Empty" },
@@ -116,14 +115,62 @@ function Navbar() {
 
 // ── SECTION ────────────────────────────────────────────────────────────────
 
-function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+function Section({ title, hint, children, info }: {
+  title: string; hint?: string; children: React.ReactNode; info?: React.ReactNode;
+}) {
+  const [flipped, setFlipped] = useState(false);
   return (
-    <div className="bg-white/80 border border-[rgba(222,217,209,0.9)] rounded-[24px] w-full" style={{ boxShadow: "0px 8px 12px rgba(0,0,0,0.04)", willChange: "transform" }}>
-      <div className="px-6 pt-5 pb-1 flex items-baseline gap-3">
-        <span className="text-[#141414] tracking-[-0.8px]" style={{ fontSize: 20, fontWeight: 700 }}>{title}</span>
-        {hint && <span className="text-[#9e9e9e]" style={{ fontSize: 13, fontWeight: 600 }}>{hint}</span>}
+    <div style={{ perspective: "1200px" }}>
+      <div
+        className="relative transition-transform duration-500"
+        style={{ transformStyle: "preserve-3d", transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)" }}
+      >
+        {/* Front face */}
+        <div
+          className="bg-white/80 border border-[rgba(222,217,209,0.9)] rounded-[24px] w-full"
+          style={{ boxShadow: "0px 8px 12px rgba(0,0,0,0.04)", backfaceVisibility: "hidden" }}
+        >
+          <div className="px-6 pt-5 pb-1 flex items-center justify-between gap-2">
+            <div className="flex items-baseline gap-3 min-w-0">
+              <span className="text-[#141414] tracking-[-0.8px]" style={{ fontSize: 20, fontWeight: 700 }}>{title}</span>
+              {hint && <span className="text-[#9e9e9e]" style={{ fontSize: 13, fontWeight: 600 }}>{hint}</span>}
+            </div>
+            {info && (
+              <button
+                type="button"
+                onClick={() => setFlipped(true)}
+                className="size-7 rounded-full border border-[#ddd5c8] text-[#b8ad9e] hover:text-[#141414] hover:border-[#888] transition-all flex items-center justify-center flex-shrink-0"
+                aria-label={`About ${title}`}
+              >
+                <Info className="size-3.5" />
+              </button>
+            )}
+          </div>
+          <div className="px-6 pb-6 pt-3">{children}</div>
+        </div>
+
+        {/* Back face */}
+        {info && (
+          <div
+            className="absolute inset-0 bg-[#faf9f6] border border-[rgba(222,217,209,0.9)] rounded-[24px] overflow-auto"
+            style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)", boxShadow: "0px 8px 12px rgba(0,0,0,0.04)" }}
+          >
+            <div className="px-6 pt-5 pb-2 flex items-center justify-between gap-2">
+              <span className="text-[#141414] tracking-[-0.6px]" style={{ fontSize: 17, fontWeight: 700 }}>{title}</span>
+              <button
+                type="button"
+                onClick={() => setFlipped(false)}
+                className="flex items-center gap-1.5 text-[#9e9e9e] hover:text-[#141414] transition-colors flex-shrink-0"
+                style={{ fontSize: 12, fontWeight: 600 }}
+              >
+                <span>←</span>
+                <span>Back</span>
+              </button>
+            </div>
+            <div className="px-6 pb-6 pt-3">{info}</div>
+          </div>
+        )}
       </div>
-      <div className="px-6 pb-6 pt-3">{children}</div>
     </div>
   );
 }
@@ -157,10 +204,10 @@ function PillRow({ options, value, onChange }: { options: Pill[]; value: string;
 // ── SWATCH ROW ─────────────────────────────────────────────────────────────
 
 function SwatchRow({
-  options, value, onSelect, disabled = false, forcedId, disabledIds = [],
+  options, value, onSelect, disabled = false, forcedId, disabledIds = [], blockedReason,
 }: {
   options: Swatch[]; value: string[] | string; onSelect: (id: string) => void;
-  disabled?: boolean; forcedId?: string; disabledIds?: string[];
+  disabled?: boolean; forcedId?: string; disabledIds?: string[]; blockedReason?: string;
 }) {
   const isSelected = (id: string) => Array.isArray(value) ? value.includes(id) : value === id;
   return (
@@ -178,7 +225,7 @@ function SwatchRow({
             disabled={!isColorBlocked && isDisabled}
             onClick={() => { if (!isDisabled) onSelect(o.id); }}
             className={`flex flex-col items-center justify-center gap-1 h-[100px] px-1 rounded-xl transition ${
-              isDisabled ? "opacity-40 cursor-not-allowed" : "hover:bg-black/5"
+              isColorBlocked ? "opacity-30 cursor-not-allowed grayscale" : isDisabled ? "opacity-30 cursor-not-allowed" : "hover:bg-black/5"
             }`}
           >
             <div
@@ -190,7 +237,8 @@ function SwatchRow({
               {sel && <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-2 rounded-full bg-white shadow ring-1 ring-black/30" />}
             </div>
             <span className="uppercase text-[#181612] text-center" style={{ fontSize: 12, fontWeight: 600 }}>{o.label}</span>
-            {o.price && <span className="text-[#9e9e9e] text-center" style={{ fontSize: 9, fontWeight: 600 }}>{o.price}</span>}
+            {isColorBlocked && <span className="text-[#b8362c] text-center leading-tight" style={{ fontSize: 9, fontWeight: 700 }}>N/A</span>}
+            {!isColorBlocked && o.price && <span className="text-[#9e9e9e] text-center" style={{ fontSize: 9, fontWeight: 600 }}>{o.price}</span>}
           </button>
         );
 
@@ -198,7 +246,7 @@ function SwatchRow({
           return (
             <Tooltip key={o.id}>
               <TooltipTrigger asChild>{btn}</TooltipTrigger>
-              <TooltipContent side="top">Too similar to dial color</TooltipContent>
+              <TooltipContent side="top">{blockedReason ?? "Too similar to dial color"}</TooltipContent>
             </Tooltip>
           );
         }
@@ -289,7 +337,6 @@ function WatchPreview({
     return { x: 50 + 42 * Math.cos(angle), y: 50 + 42 * Math.sin(angle), idx: i };
   });
   const romanNumerals = ["XII","I","II","III","IV","V","VI","VII","VIII","IX","X","XI"];
-  const ixii = ["XII","","","III","","","VI","","","IX","",""];
   const lugBase = { position: "absolute" as const, width: lugW, height: lugH, background: caseColor };
 
   return (
@@ -323,7 +370,6 @@ function WatchPreview({
                     let label = "";
                     if (markerType === "arabic") label = String(p.idx === 0 ? 12 : p.idx);
                     else if (markerType === "roman") label = romanNumerals[p.idx];
-                    else if (markerType === "i-xii") label = ixii[p.idx];
                     if (!label) return null;
                     return <text key={p.idx} x={p.x} y={p.y} fill={markerColor} fontSize={6} fontWeight={700} textAnchor="middle" dominantBaseline="central">{label}</text>;
                   })}
@@ -382,16 +428,12 @@ function OrderReviewModal({
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(5px)" }} onClick={onClose}>
       <div className="bg-white w-full sm:max-w-lg rounded-t-[32px] sm:rounded-[32px] max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        {/* Mobile drag handle */}
         <div className="sm:hidden flex justify-center pt-3 pb-1"><div className="w-9 h-1 rounded-full bg-[#ddd]" /></div>
-
         <div className="px-7 pt-5 pb-8 flex flex-col gap-5">
           <div className="flex items-center justify-between">
             <h2 className="text-[#141414] tracking-[-0.8px]" style={{ fontSize: 22, fontWeight: 800 }}>Review Your Order</h2>
             <button type="button" onClick={onClose} className="size-9 flex items-center justify-center rounded-full hover:bg-black/5 transition text-[#9e9e9e]"><X className="size-4" /></button>
           </div>
-
-          {/* Config summary */}
           <div className="border border-[rgba(222,217,209,0.9)] rounded-2xl overflow-hidden">
             {lines.map((line, i) => (
               <div key={line.label} className={`flex items-center justify-between px-4 py-3 ${i < lines.length - 1 ? "border-b border-[#f0ece4]" : ""}`}>
@@ -404,8 +446,6 @@ function OrderReviewModal({
               </div>
             ))}
           </div>
-
-          {/* Price breakdown */}
           <div className="bg-[#f8f6f2] rounded-2xl px-5 py-4 flex flex-col gap-2">
             <p className="text-[#9e9e9e] uppercase tracking-widest mb-1" style={{ fontSize: 10, fontWeight: 700 }}>Price Breakdown</p>
             {breakdown.map((b) => (
@@ -419,11 +459,9 @@ function OrderReviewModal({
               <span className="text-[#141414]" style={{ fontSize: 16, fontWeight: 800 }}>${totalPrice} USD</span>
             </div>
           </div>
-
           <p className="text-center text-[#9e9e9e]" style={{ fontSize: 12 }}>
             Estimated delivery: <strong className="text-[#141414]">4–6 weeks</strong>. Payment collected on confirmation.
           </p>
-
           <button type="button" onClick={onConfirm} className="w-full h-12 rounded-full bg-[#111] text-white hover:bg-[#333] active:scale-[0.98] transition-all" style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.04em" }}>
             Confirm &amp; Place Order
           </button>
@@ -462,42 +500,6 @@ function SuccessModal({ open, onClose, totalPrice }: { open: boolean; onClose: (
   );
 }
 
-// ── FOOTER ─────────────────────────────────────────────────────────────────
-
-function Footer() {
-  return (
-    <footer className="border-t border-[rgba(222,217,209,0.9)]" style={{ background: "rgba(255,255,255,0.6)" }}>
-      <div className="mx-auto max-w-[1280px] px-8 py-10 grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div>
-          <div className="flex items-baseline mb-2">
-            <span className="text-[#141414] tracking-[-0.04em]" style={{ fontSize: 17, fontWeight: 800 }}>CRAFT</span>
-            <span className="text-[#737373] tracking-[-0.04em]" style={{ fontSize: 17, fontWeight: 300 }}>WATCH</span>
-          </div>
-          <p className="text-[#737373]" style={{ fontSize: 13, lineHeight: 1.7 }}>Handcrafted timepieces,<br />built to your specification.</p>
-        </div>
-        <div>
-          <p className="text-[#141414] uppercase tracking-widest mb-3" style={{ fontSize: 10, fontWeight: 700 }}>Navigation</p>
-          {["Collection", "About", "Contact", "FAQ"].map((l) => (
-            <div key={l} className="mb-2"><a href="#" className="text-[#737373] hover:text-[#141414] transition-colors" style={{ fontSize: 13 }}>{l}</a></div>
-          ))}
-        </div>
-        <div>
-          <p className="text-[#141414] uppercase tracking-widest mb-3" style={{ fontSize: 10, fontWeight: 700 }}>Policy</p>
-          {["Shipping", "Returns", "Warranty", "Privacy"].map((l) => (
-            <div key={l} className="mb-2"><a href="#" className="text-[#737373] hover:text-[#141414] transition-colors" style={{ fontSize: 13 }}>{l}</a></div>
-          ))}
-        </div>
-      </div>
-      <div className="border-t border-[rgba(222,217,209,0.9)] py-4">
-        <div className="mx-auto max-w-[1280px] px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span className="text-[#bbb]" style={{ fontSize: 11 }}>© 2026 CRAFTWATCH. All rights reserved.</span>
-          <span className="text-[#bbb]" style={{ fontSize: 11 }}>Made with care, built to last.</span>
-        </div>
-      </div>
-    </footer>
-  );
-}
-
 // ── APP ────────────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -515,10 +517,34 @@ export default function App() {
   const [extraStraps,   setExtraStraps]   = useState<string[]>([]);
   const [showReview,    setShowReview]    = useState(false);
   const [showSuccess,   setShowSuccess]   = useState(false);
+  const [strapTab,      setStrapTab]      = useState("rubber");
 
-  const fileRef           = useRef<HTMLInputElement>(null);
-  const dialImageRef      = useRef<string | null>(null);
+  const fileRef            = useRef<HTMLInputElement>(null);
+  const dialImageRef       = useRef<string | null>(null);
   useEffect(() => { return () => { if (dialImageRef.current) URL.revokeObjectURL(dialImageRef.current); }; }, []);
+
+  const watchAnimRef1    = useRef<HTMLDivElement>(null);
+  const watchAnimRef2    = useRef<HTMLDivElement>(null);
+  const sizeAnimMountRef = useRef(true);
+  const prevSizeValRef   = useRef(Number(caseSize));
+  useEffect(() => {
+    if (sizeAnimMountRef.current) { sizeAnimMountRef.current = false; return; }
+    const prevStr = String(prevSizeValRef.current);
+    const renderedW = (size: string, sc: number) =>
+      Math.round((CASE_SIZE_PX[size] ?? 224) * sc) + 50;
+    const animate = (ref: React.RefObject<HTMLDivElement | null>, sc: number) => {
+      if (!ref.current) return;
+      const s = 1 + (renderedW(prevStr, sc) / renderedW(caseSize, sc) - 1) * 0.5;
+      ref.current.style.transition = "none";
+      ref.current.style.transform  = `scale(${s})`;
+      void ref.current.offsetHeight;
+      ref.current.style.transition = "transform 0.18s ease-out";
+      ref.current.style.transform  = "scale(1)";
+    };
+    prevSizeValRef.current = Number(caseSize);
+    animate(watchAnimRef1, 0.80);
+    animate(watchAnimRef2, 0.70);
+  }, [caseSize]);
 
   const imageUploaded = !!dialImage;
 
@@ -542,7 +568,20 @@ export default function App() {
     if (dialImageRef.current) { URL.revokeObjectURL(dialImageRef.current); dialImageRef.current = null; }
     setCaseSize("40"); setCaseColor("black"); setDialTab("color"); setDialColor("cream");
     setDialImage(null); setDialImageName(""); setMarkerType("dots"); setMarkerColor("black");
-    setHandsColor("silver"); setSecondsColor("red"); setPrimaryStrap("rubber-black"); setExtraStraps([]);
+    setHandsColor("silver"); setSecondsColor("red"); setPrimaryStrap("rubber-black"); setExtraStraps([]); setStrapTab("rubber");
+  };
+
+  const handleDialColorChange = (newColor: string) => {
+    setDialColor(newColor);
+    const newBlocked = getSimilarColors(newColor);
+    if (newBlocked.includes(markerColor)) {
+      const fallback = METAL_COLORS.find((c) => !newBlocked.includes(c.id));
+      if (fallback) setMarkerColor(fallback.id);
+    }
+    if (newBlocked.includes(handsColor)) {
+      const fallback = METAL_COLORS.find((c) => !newBlocked.includes(c.id));
+      if (fallback) setHandsColor(fallback.id);
+    }
   };
 
   const handleConfirmOrder = () => {
@@ -551,11 +590,11 @@ export default function App() {
     setShowSuccess(true);
   };
 
-  const addExtraStrap    = (id: string) => setExtraStraps((p) => [...p, id]);
-  const removeOneExtraStrap = (id: string) =>
+  const addExtraStrap        = (id: string) => setExtraStraps((p) => [...p, id]);
+  const removeOneExtraStrap  = (id: string) =>
     setExtraStraps((p) => { const i = p.lastIndexOf(id); return i === -1 ? p : [...p.slice(0, i), ...p.slice(i + 1)]; });
-  const removeAllExtraStrap = (id: string) => setExtraStraps((p) => p.filter((x) => x !== id));
-  const extraStrapUnitPrice = (id: string) => { const m = id.split("-")[0]; return m === "leather" ? 25 : m === "nylon" ? 15 : 10; };
+  const removeAllExtraStrap  = (id: string) => setExtraStraps((p) => p.filter((x) => x !== id));
+  const extraStrapUnitPrice  = (id: string) => { const m = id.split("-")[0]; return m === "leather" ? 25 : m === "nylon" ? 15 : 10; };
 
   // Derived hex
   const dialColorHex    = DIAL_COLORS.find((d) => d.id === dialColor)?.color ?? "#fff";
@@ -593,247 +632,412 @@ export default function App() {
     ...(extraStraps.length > 0 ? [{ label: "Extra Straps", value: `${extraStraps.length} added`, price: `+$${extraStrapTotal}` }] : []),
   ];
 
+  // ── Info panel content ────────────────────────────────────────────────────
+
+  const caseSizeInfoPanel = (
+    <div className="flex flex-col gap-2.5" style={{ fontSize: 13 }}>
+      <div><strong className="text-[#181612]">40mm</strong><span className="text-[#737373]"> — Compact and lightweight. Best for wrists under 17 cm.</span></div>
+      <div><strong className="text-[#181612]">44mm</strong><span className="text-[#737373]"> — The most popular size. Balanced visibility and comfort for most wrists.</span></div>
+      <div><strong className="text-[#181612]">49mm (+$30)</strong><span className="text-[#737373]"> — Bold statement sizing. Best for larger wrists.</span></div>
+      <p className="text-[#9e9e9e] mt-1" style={{ fontSize: 12 }}>All sizes are measured lug-to-lug. Case material: anodized stainless steel.</p>
+    </div>
+  );
+
+  const caseColorInfoPanel = (
+    <div className="flex flex-col gap-2.5" style={{ fontSize: 13 }}>
+      <p className="text-[#737373]">Choose your case finish. Standard colors are included; premium finishes add +$15.</p>
+      <div className="flex flex-col gap-1.5 mt-0.5">
+        <div><span className="font-semibold text-[#181612]">Included —</span><span className="text-[#737373]"> Black, White, Cream, Navy, Olive</span></div>
+        <div><span className="font-semibold text-[#181612]">+$15 —</span><span className="text-[#737373]"> Red, Silver, Blush</span></div>
+      </div>
+      <p className="text-[#9e9e9e]" style={{ fontSize: 12 }}>All cases are anodized stainless steel.</p>
+    </div>
+  );
+
+  const dialFaceInfoPanel = (
+    <div className="flex flex-col gap-2.5" style={{ fontSize: 13 }}>
+      <div><strong className="text-[#181612]">Color</strong><span className="text-[#737373]"> — Pick from 5 refined dial colors. Each pairs differently with markers and hands.</span></div>
+      <div><strong className="text-[#181612]">Upload Image (+$25)</strong><span className="text-[#737373]"> — Add custom artwork or photography. Printed on mineral glass insert. Hour markers auto-set to Empty.</span></div>
+      <p className="text-[#9e9e9e] mt-0.5" style={{ fontSize: 12 }}>Only one option can be active at a time.</p>
+    </div>
+  );
+
+  const hourMarkerTypeInfoPanel = (
+    <div className="flex flex-col gap-2.5" style={{ fontSize: 13 }}>
+      <div><strong className="text-[#181612]">Arabic</strong><span className="text-[#737373]"> — Classic 1–12 numerals. Easy to read.</span></div>
+      <div><strong className="text-[#181612]">I–XII</strong><span className="text-[#737373]"> — Minimalist uppercase lettering.</span></div>
+      <div><strong className="text-[#181612]">Roman</strong><span className="text-[#737373]"> — Traditional Roman numerals.</span></div>
+      <div><strong className="text-[#181612]">Dots</strong><span className="text-[#737373]"> — Clean spherical markers.</span></div>
+      <div><strong className="text-[#181612]">Empty</strong><span className="text-[#737373]"> — Bare dial. Auto-selected when using a custom image.</span></div>
+    </div>
+  );
+
+  const hourMarkerColorInfoPanel = (
+    <div className="flex flex-col gap-2.5" style={{ fontSize: 13 }}>
+      <p className="text-[#737373]">Choose the metal finish for your hour markers.</p>
+      <p className="text-[#737373]">Options marked with <span className="inline-flex items-center justify-center rounded" style={{ color: "rgba(185,40,40,0.85)", fontWeight: 700 }}>✕</span> are blocked — too similar to your dial color, which would make them unreadable.</p>
+      <p className="text-[#9e9e9e]" style={{ fontSize: 12 }}>Gold and Silver work well with most dial colors.</p>
+    </div>
+  );
+
+  const handsColorInfoPanel = (
+    <div className="flex flex-col gap-2.5" style={{ fontSize: 13 }}>
+      <p className="text-[#737373]">Hands are machined from surgical-grade stainless steel and coated in your chosen finish.</p>
+      <div className="flex flex-col gap-1.5">
+        <div><strong className="text-[#181612]">Black / White</strong><span className="text-[#737373]"> — Matte finish</span></div>
+        <div><strong className="text-[#181612]">Silver / Gold</strong><span className="text-[#737373]"> — Polished finish</span></div>
+      </div>
+      <p className="text-[#9e9e9e]" style={{ fontSize: 12 }}>Colors too similar to the dial are blocked to maintain contrast.</p>
+    </div>
+  );
+
+  const secondsColorInfoPanel = (
+    <div className="flex flex-col gap-2.5" style={{ fontSize: 13 }}>
+      <p className="text-[#737373]">The seconds hand is your accent — it contrasts with the main hands and gives the watch its personality.</p>
+      <p className="text-[#737373]">Any color works with any dial and hand combination.</p>
+    </div>
+  );
+
+  const strapInfoPanel = (
+    <div className="flex flex-col gap-2.5" style={{ fontSize: 13 }}>
+      <div><strong className="text-[#181612]">Rubber (Included)</strong><span className="text-[#737373]"> — Sweat-resistant, easy to clean. Great for everyday and active wear.</span></div>
+      <div><strong className="text-[#181612]">Leather (+$25)</strong><span className="text-[#737373]"> — Full-grain leather. Develops a patina over time. Avoid prolonged water exposure.</span></div>
+      <div><strong className="text-[#181612]">Nylon (+$15)</strong><span className="text-[#737373]"> — NATO-style G10 weave. Lightweight and breathable for daily wear.</span></div>
+      <p className="text-[#9e9e9e] mt-0.5" style={{ fontSize: 12 }}>Click a color circle to set your main strap. Use <strong className="text-[#444]">Add extra</strong> to order additional straps at the listed price per material.</p>
+    </div>
+  );
+
   return (
     <>
       <Navbar />
 
+      {/* Fixed price badge — desktop only, independent of watch wrapper */}
+      <div className="hidden lg:block fixed z-30 px-4 pb-24 pt-2.5 pl-60" style={{ bottom: 40, left: 32 }}>
+        <p className="text-[#9e9e9e] uppercase tracking-widest" style={{ fontSize: 9, fontWeight: 700 }}>Price</p>
+        <div className="flex items-baseline gap-1 mt-0.5">
+          <span className="text-[#141414] tracking-tighter" style={{ fontSize: 28, fontWeight: 800 }}>${totalPrice}</span>
+          <span className="text-[#737373]" style={{ fontSize: 11, fontWeight: 600 }}>USD</span>
+        </div>
+      </div>
+
       {/* ── Page layout: left sticky, right flows with page scroll ── */}
-      <div
-        className="w-full"
-        style={{ background: "#F2EEE8" }}
-      >
+      <div className="w-full" style={{ background: "#F2EEE8" }}>
         <div className="mx-auto w-full max-w-[1280px] px-6 lg:px-8 flex flex-col lg:flex-row gap-0 lg:gap-8">
 
           {/* ── LEFT: sticky watch panel ── */}
           <div
-            className="hidden lg:flex lg:w-[46%] flex-shrink-0 flex-col items-center gap-10 py-10 pt-20"
+            className="hidden lg:flex lg:w-[46%] flex-shrink-0 flex-col items-center gap-8 py-10 pt-16"
             style={{ position: "sticky", top: 64, height: "calc(100vh - 64px)", alignSelf: "flex-start" }}
           >
+            {/* Heading + Reset button */}
             <div className="text-center">
-              <h1 className="text-[#141414] tracking-[-1.5px]" style={{ fontSize: 28, fontWeight: 800 }}>Build Your Watch</h1>
+              <div className="flex items-center justify-center gap-3">
+                <h1 className="text-[#141414] tracking-[-1.5px]" style={{ fontSize: 28, fontWeight: 800 }}>Build Your Watch</h1>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={handleReset}
+                      className="size-8 rounded-full border border-[#ddd5c8] text-[#b8ad9e] hover:text-[#141414] hover:border-[#555] hover:rotate-[-200deg] transition-all duration-500 flex items-center justify-center flex-shrink-0"
+                      aria-label="Reset all"
+                    >
+                      <RotateCcw className="size-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">Reset all</TooltipContent>
+                </Tooltip>
+              </div>
               <p className="text-[#9e9e9e] mt-0.5" style={{ fontSize: 13 }}>Configure every detail, preview in real time.</p>
             </div>
-            
-            <WatchPreview
-              caseColor={caseColorHex}
-              caseSize={caseSize}
-              dialColor={dialColorHex}
-              dialImage={dialImage}
-              handsColor={handsColorHex}
-              secondsColor={secondsColorHex}
-              markerColor={markerColorHex}
-              markerType={markerType}
-              strapColor={strapColorHex}
-              strapMaterial={strapMaterial}
-              scale={0.80}
-            />
 
-            {/* Reset */}
-            <button type="button" onClick={handleReset} className="flex items-center gap-1.5 text-[#9e9e9e] hover:text-[#333] transition-colors" style={{ fontSize: 12, fontWeight: 600 }}>
-              <RotateCcw className="size-3" /> Reset all
-            </button>
+            <div className="relative w-full flex justify-center">
+              <div ref={watchAnimRef1}>
+                <WatchPreview
+                  caseColor={caseColorHex}
+                  caseSize={caseSize}
+                  dialColor={dialColorHex}
+                  dialImage={dialImage}
+                  handsColor={handsColorHex}
+                  secondsColor={secondsColorHex}
+                  markerColor={markerColorHex}
+                  markerType={markerType}
+                  strapColor={strapColorHex}
+                  strapMaterial={strapMaterial}
+                  scale={0.80}
+                />
+              </div>
+            </div>
           </div>
 
           {/* ── RIGHT: natural page flow ── */}
           <div className="lg:w-[54%] flex-shrink-0 lg:pr-1">
             <div className="flex flex-col gap-3 pt-20 pb-4 lg:pt-20">
 
-            {/* Mobile: watch preview at top */}
-            <div className="flex lg:hidden flex-col items-center gap-4 pb-4">
-              <WatchPreview
-                caseColor={caseColorHex} caseSize={caseSize} dialColor={dialColorHex}
-                dialImage={dialImage} handsColor={handsColorHex} secondsColor={secondsColorHex}
-                markerColor={markerColorHex} markerType={markerType} strapColor={strapColorHex}
-                strapMaterial={strapMaterial} scale={0.7}
-              />
-              <div className="text-center">
-                <p className="text-[#9e9e9e] uppercase tracking-widest" style={{ fontSize: 10, fontWeight: 700 }}>Estimated Price</p>
-                <div className="flex items-baseline justify-center gap-1 mt-0.5">
-                  <span className="text-[#141414] tracking-tighter" style={{ fontSize: 36, fontWeight: 800 }}>${totalPrice}</span>
-                  <span className="text-[#737373]" style={{ fontSize: 13, fontWeight: 600 }}>USD</span>
-                </div>
-              </div>
-            </div>
-
-            <Section title="Case Size">
-              <PillRow options={CASE_SIZES} value={caseSize} onChange={setCaseSize} />
-            </Section>
-
-            <Section title="Case Color">
-              <SwatchRow options={CASE_COLORS} value={caseColor} onSelect={setCaseColor} />
-            </Section>
-
-            <Section title="Dial Face">
-              <div className="bg-[#fafafa] border border-[#e9eaeb] rounded-full p-1 flex w-full mb-4">
-                {(["color", "upload"] as const).map((t) => (
-                  <button key={t} type="button" onClick={() => setDialTab(t)}
-                    className={`flex-1 h-8 rounded-full transition ${dialTab === t ? "bg-white shadow-[0px_1px_3px_rgba(10,13,18,0.1)] text-[#414651]" : "text-[#717680]"}`}
-                    style={{ fontSize: 13, fontWeight: 600 }}>
-                    {t === "color" ? "Color" : (
-                      <span className="flex items-center justify-center gap-1.5">
-                        Upload image
-                        <span className="bg-[#111] text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full tracking-wide">+$25</span>
-                      </span>
-                    )}
+              {/* Mobile: watch preview + heading + reset + price */}
+              <div className="flex lg:hidden flex-col items-center gap-4 pb-4">
+                <div className="flex items-center justify-between w-full px-1">
+                  <div>
+                    <h1 className="text-[#141414] tracking-[-1px]" style={{ fontSize: 22, fontWeight: 800 }}>Build Your Watch</h1>
+                    <p className="text-[#9e9e9e]" style={{ fontSize: 12 }}>Configure every detail.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    className="size-9 rounded-full border border-[#ddd5c8] text-[#b8ad9e] hover:text-[#141414] hover:border-[#555] hover:rotate-[-200deg] transition-all duration-500 flex items-center justify-center flex-shrink-0"
+                    aria-label="Reset all"
+                  >
+                    <RotateCcw className="size-4" />
                   </button>
-                ))}
+                </div>
+                <div className="relative w-full flex justify-center">
+                  <div ref={watchAnimRef2}>
+                    <WatchPreview
+                      caseColor={caseColorHex} caseSize={caseSize} dialColor={dialColorHex}
+                      dialImage={dialImage} handsColor={handsColorHex} secondsColor={secondsColorHex}
+                      markerColor={markerColorHex} markerType={markerType} strapColor={strapColorHex}
+                      strapMaterial={strapMaterial} scale={0.7}
+                    />
+                  </div>
+                </div>
               </div>
-              {dialTab === "color" ? (
-                <SwatchRow options={DIAL_COLORS} value={dialColor} onSelect={setDialColor} />
-              ) : (
-                <div className="flex flex-col gap-3">
-                  <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFile(e.target.files?.[0] ?? null)} />
-                  {dialImage ? (
-                    <div className="bg-white/75 border border-dashed border-[#bfb8ad] rounded-[10px] px-4 py-3 flex items-center gap-3">
-                      <img src={dialImage} alt="uploaded dial" className="size-[72px] object-cover shadow-[2px_2px_4px_rgba(0,0,0,0.25)]" />
-                      <div className="flex-1 text-center text-black tracking-[-0.04em] truncate" style={{ fontSize: 16 }}>{dialImageName || "uploaded.png"}</div>
-                      <button type="button" onClick={clearImage} className="size-9 flex items-center justify-center text-[#33363F] hover:bg-black/5 rounded-full" aria-label="Remove image"><X className="size-4" strokeWidth={2.5} /></button>
-                    </div>
-                  ) : (
-                    <button type="button" onClick={() => fileRef.current?.click()} className="bg-white/75 border border-dashed border-[#bfb8ad] rounded-[10px] px-5 py-5 flex items-center justify-center gap-3 text-black hover:bg-white" style={{ fontSize: 18 }}>
-                      <Upload className="size-5" /> Choose File
+
+              <Section title="Case Size" info={caseSizeInfoPanel}>
+                <PillRow options={CASE_SIZES} value={caseSize} onChange={setCaseSize} />
+              </Section>
+
+              <Section title="Case Color" info={caseColorInfoPanel}>
+                <SwatchRow options={CASE_COLORS} value={caseColor} onSelect={setCaseColor} />
+              </Section>
+
+              <Section title="Dial Face" info={dialFaceInfoPanel}>
+                <div className="bg-[#fafafa] border border-[#e9eaeb] rounded-full p-1 flex w-full mb-4">
+                  {(["color", "upload"] as const).map((t) => (
+                    <button key={t} type="button" onClick={() => setDialTab(t)}
+                      className={`flex-1 h-8 rounded-full transition ${dialTab === t ? "bg-white shadow-[0px_1px_3px_rgba(10,13,18,0.1)] text-[#414651]" : "text-[#717680]"}`}
+                      style={{ fontSize: 13, fontWeight: 600 }}>
+                      {t === "color" ? "Color" : (
+                        <span className="flex items-center justify-center gap-1.5">
+                          Upload image
+                          <span className="bg-[#111] text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full tracking-wide">+$25</span>
+                        </span>
+                      )}
                     </button>
-                  )}
-                  <p className="text-[#9e9e9e]" style={{ fontSize: 13 }}>When an image is uploaded, hour markers become Empty.</p>
+                  ))}
                 </div>
-              )}
-            </Section>
-
-            <Section title="Hour Marker Type">
-              <div className={imageUploaded ? "opacity-60 pointer-events-none" : ""}>
-                <div className="flex flex-wrap items-start gap-3">
-                  {[
-                    { id: "arabic", preview: <span className={`text-[34px] tracking-[-1.4px] leading-none ${markerType === "arabic" ? "text-white/80" : "text-black/80"}`}>1-12</span> },
-                    { id: "i-xii",  preview: <span className={`text-[34px] tracking-[-1.4px] leading-none ${markerType === "i-xii"  ? "text-white/80" : "text-black/80"}`}>I-XII</span> },
-                    { id: "roman",  preview: <span className={`text-[28px] tracking-[-0.8px] leading-none ${markerType === "roman"  ? "text-white/80" : "text-black/80"}`}>XII</span> },
-                    { id: "dots",   preview: (
-                      <svg width="30" height="30" viewBox="62.5 54 36 36" fill="none">
-                        <path d={svgPaths.p24df2f00} fill={markerType === "dots" ? "rgba(255,255,255,0.8)" : "rgba(0,0,0,0.8)"} />
-                      </svg>
-                    )},
-                    { id: "empty",  preview: null },
-                  ].map(({ id, preview }) => {
-                    const label = HOUR_MARKER_TYPES.find((m) => m.id === id)?.label ?? id;
-                    const active = markerType === id;
-                    return (
-                      <button key={id} type="button" onClick={() => setMarkerType(id)} className="flex flex-col gap-1.5 items-center">
-                        <div className={`flex items-center justify-center h-[100px] w-[90px] rounded-[24px] transition ${active ? "bg-[#111] shadow-[0px_10px_12px_rgba(0,0,0,0.14)]" : "bg-white border border-[#ded9d1] hover:border-[#111]"}`}>
-                          {preview}
-                        </div>
-                        <span className="text-[#272727]" style={{ fontSize: 14 }}>{label}</span>
+                {dialTab === "color" ? (
+                  <SwatchRow options={DIAL_COLORS} value={dialColor} onSelect={handleDialColorChange} />
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFile(e.target.files?.[0] ?? null)} />
+                    {dialImage ? (
+                      <div className="bg-white/75 border border-dashed border-[#bfb8ad] rounded-[10px] px-4 py-3 flex items-center gap-3">
+                        <img src={dialImage} alt="uploaded dial" className="size-[72px] object-cover shadow-[2px_2px_4px_rgba(0,0,0,0.25)]" />
+                        <div className="flex-1 text-center text-black tracking-[-0.04em] truncate" style={{ fontSize: 16 }}>{dialImageName || "uploaded.png"}</div>
+                        <button type="button" onClick={clearImage} className="size-9 flex items-center justify-center text-[#33363F] hover:bg-black/5 rounded-full" aria-label="Remove image"><X className="size-4" strokeWidth={2.5} /></button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => fileRef.current?.click()} className="bg-white/75 border border-dashed border-[#bfb8ad] rounded-[10px] px-5 py-5 flex items-center justify-center gap-3 text-black hover:bg-white" style={{ fontSize: 18 }}>
+                        <Upload className="size-5" /> Choose File
                       </button>
-                    );
-                  })}
+                    )}
+                    <p className="text-[#9e9e9e]" style={{ fontSize: 13 }}>When an image is uploaded, hour markers become Empty.</p>
+                  </div>
+                )}
+              </Section>
+
+              <Section title="Hour Marker Type" info={hourMarkerTypeInfoPanel}>
+                <div className={imageUploaded ? "opacity-60 pointer-events-none" : ""}>
+                  <div className="flex flex-wrap items-start gap-3">
+                    {[
+                      { id: "arabic", preview: <span className={`text-[34px] tracking-[-1.4px] leading-none ${markerType === "arabic" ? "text-white/80" : "text-black/80"}`}>1-12</span> },
+                      { id: "roman",  preview: <span className={`text-[28px] tracking-[-0.8px] leading-none ${markerType === "roman"  ? "text-white/80" : "text-black/80"}`}>XII</span> },
+                      { id: "dots",   preview: (
+                        <svg width="30" height="30" viewBox="62.5 54 36 36" fill="none">
+                          <path d={svgPaths.p24df2f00} fill={markerType === "dots" ? "rgba(255,255,255,0.8)" : "rgba(0,0,0,0.8)"} />
+                        </svg>
+                      )},
+                      { id: "empty",  preview: null },
+                    ].map(({ id, preview }) => {
+                      const label = HOUR_MARKER_TYPES.find((m) => m.id === id)?.label ?? id;
+                      const active = markerType === id;
+                      return (
+                        <button key={id} type="button" onClick={() => setMarkerType(id)} className="flex flex-col gap-1.5 items-center">
+                          <div className={`flex items-center justify-center h-[100px] w-[90px] rounded-[24px] transition ${active ? "bg-[#111] shadow-[0px_10px_12px_rgba(0,0,0,0.14)]" : "bg-white border border-[#ded9d1] hover:border-[#111]"}`}>
+                            {preview}
+                          </div>
+                          <span className="text-[#272727]" style={{ fontSize: 14 }}>{label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-              {imageUploaded && <p className="mt-3 text-[#9e9e9e]" style={{ fontSize: 13 }}>Locked to <strong>Empty</strong> while a dial image is active.</p>}
-            </Section>
+                {imageUploaded && <p className="mt-3 text-[#9e9e9e]" style={{ fontSize: 13 }}>Locked to <strong>Empty</strong> while a dial image is active.</p>}
+              </Section>
 
-            <Section title="Hour Marker Colors">
-              <div className={imageUploaded ? "opacity-60 pointer-events-none" : ""}>
-                <SwatchRow options={METAL_COLORS} value={markerColor} onSelect={setMarkerColor} disabledIds={disabledMetalColors} />
-              </div>
-              {imageUploaded && <p className="mt-2 text-[#9e9e9e]" style={{ fontSize: 13 }}>Not shown with a custom dial image.</p>}
-            </Section>
-
-            <Section title="Hands Color">
-              <SwatchRow options={METAL_COLORS} value={handsColor} onSelect={setHandsColor} disabledIds={disabledMetalColors} />
-            </Section>
-
-            <Section title="Seconds Hand Color">
-              <SwatchRow options={SECONDS_COLORS} value={secondsColor} onSelect={setSecondsColor} />
-            </Section>
-
-            <Section title="Strap">
-              <div className="flex flex-col gap-1">
-                {STRAP_GROUPS.map((group, gi) => (
-                  <div key={group.id} className={`flex flex-col gap-3 pt-3 pb-4 ${gi < STRAP_GROUPS.length - 1 ? "border-b border-dashed border-[#d8cfbc]" : ""}`}>
-                    <div className="flex items-center gap-2">
-                      <span className="italic text-[#181612]" style={{ fontSize: 17 }}>{group.label}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide ${group.price === "Included" ? "bg-[#f0ede8] text-[#8a8275]" : "bg-[#111] text-white"}`}>{group.price}</span>
+              <Section title="Hour Marker Colors" info={hourMarkerColorInfoPanel}>
+                <div className={imageUploaded ? "opacity-60 pointer-events-none" : ""}>
+                  <SwatchRow
+                    options={METAL_COLORS} value={markerColor} onSelect={setMarkerColor}
+                    disabledIds={disabledMetalColors}
+                    blockedReason={`Blends with ${DIAL_COLORS.find((d) => d.id === dialColor)?.label} dial — pick a contrasting color`}
+                  />
+                </div>
+                                  {disabledMetalColors.length > 0 && !imageUploaded && (
+                    <div className="py-2.5" style={{ fontSize: 13 }}>
+                      <span className="text-[#a49a87]">With a </span>
+                      <strong className="text-[#a49a87]">{DIAL_COLORS.find((d) => d.id === dialColor)?.label}</strong>
+                      <span className="text-[#a49a87]"> dial, similar-toned colors are blocked — they won't contrast against the dial.</span>
                     </div>
-                    <div className="flex flex-wrap gap-x-2 gap-y-3">
+                  )}
+                {imageUploaded && <p className="mt-2 text-[#9e9e9e]" style={{ fontSize: 13 }}>Not shown with a custom dial image.</p>}
+              </Section>
+
+              <Section title="Hands Color" info={handsColorInfoPanel}>
+                <SwatchRow
+                  options={METAL_COLORS} value={handsColor} onSelect={setHandsColor}
+                  disabledIds={disabledMetalColors}
+                  blockedReason={`Blends with ${DIAL_COLORS.find((d) => d.id === dialColor)?.label} dial — pick a contrasting color`}
+                  />
+                  {disabledMetalColors.length > 0 && !imageUploaded && (
+                    <div className="py-2.5" style={{ fontSize: 13 }}>
+                      <span className="text-[#a49a87]">With a </span>
+                      <strong className="text-[#a49a87]">{DIAL_COLORS.find((d) => d.id === dialColor)?.label}</strong>
+                      <span className="text-[#a49a87]"> dial, similar-toned colors are blocked — they won't contrast against the dial.</span>
+                    </div>
+                  )}
+              </Section>
+
+              <Section title="Seconds Hand Color" info={secondsColorInfoPanel}>
+                <SwatchRow options={SECONDS_COLORS} value={secondsColor} onSelect={setSecondsColor} />
+              </Section>
+
+              <Section title="Strap" info={strapInfoPanel}>
+                {/* Material tabs */}
+                <div className="bg-[#fafafa] border border-[#e9eaeb] rounded-full p-1 flex w-full mb-4">
+                  {STRAP_GROUPS.map((group) => (
+                    <button
+                      key={group.id}
+                      type="button"
+                      onClick={() => setStrapTab(group.id)}
+                      className={`flex-1 h-8 rounded-full transition flex items-center justify-center gap-1.5 ${
+                        strapTab === group.id
+                          ? "bg-white shadow-[0px_1px_3px_rgba(10,13,18,0.1)] text-[#414651]"
+                          : "text-[#717680]"
+                      }`}
+                      style={{ fontSize: 13, fontWeight: 600 }}
+                    >
+                      <span>{group.label}</span>
+                      {group.price !== "Included" && (
+                        <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full tracking-wide ${
+                          strapTab === group.id ? "bg-[#111] text-white" : "bg-[#e8e4de] text-[#737373]"
+                        }`}>{group.price}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Colors for active tab */}
+                {(() => {
+                  const group = STRAP_GROUPS.find((g) => g.id === strapTab)!;
+                  return (
+                    <div className="flex flex-col gap-2" style={{ minHeight: 292 }}>
                       {group.colors.map((o) => {
                         const isPrimary  = primaryStrap === o.id;
                         const extraCount = extraStraps.filter((x) => x === o.id).length;
+                        const priceEach  = extraStrapUnitPrice(o.id);
                         return (
-                          <div key={o.id} className="flex flex-col items-center gap-1.5" style={{ width: 64 }}>
-                            <div className="relative">
-                              <button
-                                type="button"
-                                title="Set as main strap"
-                                onClick={() => setPrimaryStrap(o.id)}
-                                className={`relative rounded-full size-[50px] transition-all flex-shrink-0 ${isPrimary ? "ring-2 ring-offset-2 ring-[#111]" : "ring-1 ring-black/10 hover:ring-black/30"}`}
-                                style={{ background: o.color, boxShadow: "inset 0px -2.9px 5.8px rgba(0,0,0,0.08), inset 0px 2.9px 5.8px rgba(255,255,255,0.18)" }}
-                              >
-                                {isPrimary && <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-2 rounded-full bg-white shadow ring-1 ring-black/30" />}
-                              </button>
+                          <div
+                            key={o.id}
+                            onClick={() => setPrimaryStrap(o.id)}
+                            className={`flex items-center gap-3 rounded-2xl px-4 py-2.5 border transition-all cursor-pointer ${
+                              isPrimary ? "bg-[#111] border-[#111]" : "bg-white/60 hover:border-[#888]"
+                            }`}
+                          >
+                            <div className="relative flex-shrink-0">
+                              <div
+                                className="rounded-full size-8 ring-1 ring-black/10"
+                                style={{ background: o.color, boxShadow: "inset 0px -2px 4px rgba(0,0,0,0.08), inset 0px 2px 4px rgba(255,255,255,0.18)" }}
+                              />
                               {extraCount > 0 && (
-                                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-[#111] text-white flex items-center justify-center px-1 pointer-events-none" style={{ fontSize: 8, fontWeight: 800 }}>
+                                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-[#2563eb] text-white flex items-center justify-center px-1 pointer-events-none" style={{ fontSize: 8, fontWeight: 800 }}>
                                   {extraCount}
                                 </span>
                               )}
                             </div>
-                            <span className="uppercase text-[#181612] text-center leading-tight" style={{ fontSize: 10, fontWeight: 600 }}>{o.label}</span>
-                            <button
-                              type="button"
-                              onClick={() => addExtraStrap(o.id)}
-                              className="w-full py-1 rounded-full border border-[#ded9d1] bg-white text-[#333] hover:bg-[#111] hover:text-white hover:border-[#111] transition-all"
-                              style={{ fontSize: 9, fontWeight: 700 }}
-                            >
-                              + Add
-                            </button>
+
+                            <div className="flex-1 min-w-0">
+                              <div className={isPrimary ? "text-white" : "text-[#181612]"} style={{ fontSize: 13, fontWeight: 600 }}>{o.label}</div>
+                              {extraCount > 0 && (
+                                <div className={isPrimary ? "text-white/50" : "text-[#8a8275]"} style={{ fontSize: 10 }}>+${priceEach} each · +${priceEach * extraCount} total</div>
+                              )}
+                            </div>
+
+                            {isPrimary && (
+                              <span className="text-white/60 uppercase tracking-widest flex-shrink-0" style={{ fontSize: 9, fontWeight: 700 }}>Main</span>
+                            )}
+
+                            {extraCount > 0 ? (
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); removeOneExtraStrap(o.id); }}
+                                  className={`size-6 rounded-full border flex items-center justify-center transition ${
+                                    isPrimary ? "border-white/30 text-white/70 hover:bg-white/10" : "border-[#ded9d1] text-[#444] hover:bg-black/5"
+                                  }`}
+                                  style={{ fontSize: 14, lineHeight: 1 }}
+                                >−</button>
+                                <span className={`w-4 text-center ${isPrimary ? "text-white" : "text-[#181612]"}`} style={{ fontSize: 12, fontWeight: 700 }}>{extraCount}</span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); addExtraStrap(o.id); }}
+                                  className={`size-6 rounded-full border flex items-center justify-center transition ${
+                                    isPrimary ? "border-white/30 text-white/70 hover:bg-white/10" : "border-[#ded9d1] text-[#444] hover:bg-black/5"
+                                  }`}
+                                  style={{ fontSize: 14, lineHeight: 1 }}
+                                >+</button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); removeAllExtraStrap(o.id); }}
+                                  className={`size-6 rounded-full flex items-center justify-center transition ${
+                                    isPrimary ? "text-white/50 hover:text-white hover:bg-white/10" : "text-[#aaa] hover:text-[#333] hover:bg-black/5"
+                                  }`}
+                                  aria-label="Remove all"
+                                ><X className="size-3" /></button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); addExtraStrap(o.id); }}
+                                className={`h-7 px-3 rounded-full border flex items-center gap-1 transition-all flex-shrink-0 ${
+                                  isPrimary
+                                    ? "border-white/30 text-white/80 hover:border-white hover:bg-white/10"
+                                    : "border-[#ded9d1] text-[#555] hover:bg-[#111] hover:text-white hover:border-[#111]"
+                                }`}
+                                style={{ fontSize: 11, fontWeight: 700 }}
+                              >
+                                <Plus className="size-3 flex-shrink-0" />
+                                <span>Add Extra</span>
+                              </button>
+                            )}
                           </div>
                         );
                       })}
                     </div>
-                  </div>
-                ))}
-
-                {extraStraps.length > 0 && (() => {
-                  const grouped: Record<string, number> = {};
-                  extraStraps.forEach((id) => { grouped[id] = (grouped[id] || 0) + 1; });
-                  return (
-                    <div className="mt-2 pt-4 border-t border-[#ded9d1]">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[#181612] uppercase tracking-wide" style={{ fontSize: 10, fontWeight: 700 }}>Extra Straps</span>
-                          <span className="bg-[#111] text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">{extraStraps.length}</span>
-                        </div>
-                        <span className="text-[#8a8275]" style={{ fontSize: 11, fontWeight: 600 }}>+${extraStrapTotal} added</span>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        {Object.entries(grouped).map(([id, count]) => {
-                          const strap = ALL_STRAPS.find((s) => s.id === id);
-                          const mat = id.split("-")[0];
-                          const priceEach = extraStrapUnitPrice(id);
-                          if (!strap) return null;
-                          return (
-                            <div key={id} className="flex items-center gap-3 bg-[#fafaf8] border border-[#ede9e2] rounded-2xl px-4 py-3">
-                              <div className="rounded-full size-7 ring-1 ring-black/10 flex-shrink-0" style={{ background: strap.color }} />
-                              <div className="flex-1 min-w-0">
-                                <div className="text-[#181612] capitalize" style={{ fontSize: 12, fontWeight: 600 }}>{mat.charAt(0).toUpperCase() + mat.slice(1)} · {strap.label}</div>
-                                <div className="text-[#8a8275]" style={{ fontSize: 10 }}>${priceEach} each · ${priceEach * count} total</div>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <button type="button" onClick={() => removeOneExtraStrap(id)} className="size-6 rounded-full border border-[#ded9d1] text-[#333] flex items-center justify-center hover:bg-black/5 transition" style={{ fontSize: 13, lineHeight: 1 }}>−</button>
-                                <span className="w-4 text-center text-[#181612]" style={{ fontSize: 12, fontWeight: 700 }}>{count}</span>
-                                <button type="button" onClick={() => addExtraStrap(id)} className="size-6 rounded-full border border-[#ded9d1] text-[#333] flex items-center justify-center hover:bg-black/5 transition" style={{ fontSize: 13, lineHeight: 1 }}>+</button>
-                              </div>
-                              <button type="button" onClick={() => removeAllExtraStrap(id)} className="size-6 rounded-full text-[#aaa] flex items-center justify-center hover:text-[#333] hover:bg-black/5 transition" aria-label="Remove all"><X className="size-3.5" /></button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
                   );
                 })()}
-              </div>
-            </Section>
+
+                {/* Extra straps total — always rendered to keep card height static */}
+                <div className={`mt-3 flex items-center justify-between px-1 transition-opacity duration-200 ${extraStraps.length > 0 ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+                  <span className="text-[#8a8275]" style={{ fontSize: 12 }}>
+                    {extraStraps.length} extra strap{extraStraps.length !== 1 ? "s" : ""} added
+                  </span>
+                  <span className="text-[#181612]" style={{ fontSize: 13, fontWeight: 700 }}>+${extraStrapTotal}</span>
+                </div>
+              </Section>
 
             </div>{/* end sections */}
 
-            {/* Sticky Review & Order — scrolls with page, stops at column bottom before Footer */}
+            {/* Sticky Review & Order */}
             <div className="sticky bottom-0 z-10">
               <div className="pb-12" style={{ background: "#F2EEE8", borderTopLeftRadius: 32, borderTopRightRadius: 32 }}>
                 <button
@@ -843,15 +1047,14 @@ export default function App() {
                   style={{ fontSize: 15, fontWeight: 700, letterSpacing: "0.03em", height: 52 }}
                 >
                   <span>Review &amp; Order</span>
-                  <span className="bg-white/15 px-3 py-1 rounded-full" style={{ fontSize: 14, fontWeight: 800 }}>${totalPrice}</span>
+                  {/* Price badge: visible only on mobile since desktop shows it in the left panel */}
+                  <span className="lg:hidden bg-white/15 px-3 py-1 rounded-full" style={{ fontSize: 14, fontWeight: 800 }}>${totalPrice}</span>
                 </button>
               </div>
             </div>
           </div>{/* end RIGHT */}
         </div>{/* end columns */}
       </div>{/* end background */}
-
-      <Footer />
 
       <OrderReviewModal
         open={showReview}
