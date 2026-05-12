@@ -751,8 +751,8 @@ export default function App() {
         <div style={{ background: "rgba(247,243,237,0.82)", backdropFilter: "blur(9px)", borderBottom: "1px solid rgba(226,221,212,0.7)", padding: "14px 16px 10px 16px" }}>
           <div className="flex items-center justify-between">
             <div>
-              <div className="uppercase text-[#74706a] tracking-[1.4px]" style={{ fontSize: 11, fontWeight: 700 }}>Analog Watch</div>
-              <div className="text-[#111111] leading-[24px]" style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-1.2px" }}>Customizer</div>
+              <div className="uppercase text-[#74706a] tracking-[1.4px]" style={{ fontSize: 9, fontWeight: 700 }}>Configure every detail</div>
+              <div className="text-[#111111] leading-[24px]" style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-1.2px" }}>Build Your Watch  </div>
             </div>
             <div className="flex items-center gap-2">
               {!isDefault && (
@@ -857,7 +857,7 @@ export default function App() {
                   <TooltipContent side="right">Reset all</TooltipContent>
                 </Tooltip>
               </div>
-              <p className="text-[#9e9e9e] mt-0.5" style={{ fontSize: 13 }}>Configure every detail, preview in real time.</p>
+              <p className="text-[#9e9e9e] mt-0.5" style={{ fontSize: 11 }}>Configure every detail, preview in real time.</p>
             </div>
 
             <div className="flex flex-col items-center gap-3">
