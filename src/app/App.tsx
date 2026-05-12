@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useLayoutEffect } from "react";
-import { Upload, X, RotateCcw, Info, Plus } from "lucide-react";
+import React, { useState, useRef, useEffect, useLayoutEffect, useId } from "react";
+import { Upload, X, RotateCcw, Info, Plus, Minus, Maximize2, Minimize2 } from "lucide-react";
 import svgPaths from "../imports/Section-1-1/svg-n6f01f9iwu";
 import confetti from "canvas-confetti";
 import { Tooltip, TooltipTrigger, TooltipContent } from "./components/ui/tooltip";
@@ -14,8 +14,8 @@ type StrapGroup = { id: string; label: string; price: string; colors: Swatch[] }
 
 const CASE_SIZES: Pill[] = [
   { id: "40", label: "40mm", price: "Included" },
-  { id: "44", label: "44mm", price: "Included" },
-  { id: "49", label: "49mm", price: "+$30" },
+  { id: "49", label: "49mm", price: "+$15" },
+  { id: "64", label: "64mm", price: "+$30" },
 ];
 
 const CASE_COLORS: Swatch[] = [
@@ -91,13 +91,33 @@ const STRAP_GROUPS: StrapGroup[] = [
 ];
 
 const ALL_STRAPS: Swatch[] = STRAP_GROUPS.flatMap((g) => g.colors);
-const CASE_SIZE_PX: Record<string, number> = { "40": 224, "44": 248, "49": 272 };
+const CASE_SIZE_PX: Record<string, number> = { "40": 180, "49": 200, "64": 220 };
+
+const getGMT7 = () => {
+  const now = new Date();
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  const g = new Date(utcMs + 7 * 3600000);
+  return { h: g.getHours(), m: g.getMinutes(), s: g.getSeconds() };
+};
+
+function TimeDisplay({ className = "", style }: { className?: string; style?: React.CSSProperties }) {
+  const [time, setTime] = useState(getGMT7);
+  useEffect(() => {
+    const id = setInterval(() => setTime(getGMT7()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div className={`text-[#737373] uppercase tracking-[0.16em] ${className}`} style={{ fontSize: 11, fontWeight: 700, ...style }}>
+      GMT+7 · {String(time.h).padStart(2, "0")}:{String(time.m).padStart(2, "0")}:{String(time.s).padStart(2, "0")}
+    </div>
+  );
+}
 
 // ── NAVBAR ─────────────────────────────────────────────────────────────────
 
 function Navbar() {
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-[rgba(222,217,209,0.6)] bg-white/90 backdrop-blur-md">
+    <nav className="hidden lg:block sticky top-0 z-50 w-full border-b border-[rgba(222,217,209,0.6)] bg-white/90 backdrop-blur-md">
       <div className="mx-auto max-w-[1280px] px-8 h-16 flex items-center justify-between">
         <a href="#" className="select-none flex items-baseline">
           <span className="text-[#141414] tracking-[-0.04em]" style={{ fontSize: 20, fontWeight: 800 }}>CRAFT</span>
@@ -306,12 +326,6 @@ function WatchPreview({
   handsColor: string; secondsColor: string; markerColor: string; markerType: string;
   strapColor: string; strapMaterial: string; scale?: number;
 }) {
-  const getGMT7 = () => {
-    const now = new Date();
-    const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
-    const g = new Date(utcMs + 7 * 3600000);
-    return { h: g.getHours(), m: g.getMinutes(), s: g.getSeconds() };
-  };
   const [time, setTime] = useState(getGMT7);
   useEffect(() => {
     const id = setInterval(() => setTime(getGMT7()), 1000);
@@ -321,6 +335,11 @@ function WatchPreview({
   const secAngle    = time.s * 6;
   const minuteAngle = time.m * 6 + time.s * 0.1;
   const hourAngle   = (time.h % 12) * 30 + time.m * 0.5 + time.s * (0.5 / 60);
+
+  const uid = useId().replace(/:/g, "");
+  const msId = `ms-${uid}`;
+  const hsId = `hs-${uid}`;
+  const ssId = `ss-${uid}`;
 
   const cs       = Math.round((CASE_SIZE_PX[caseSize] ?? 224) * scale);
   const dialPad  = Math.round(cs * 0.05);
@@ -363,8 +382,8 @@ function WatchPreview({
             <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 30% 18%, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 35%), linear-gradient(160deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 40%)" }} />
             {!dialImage && markerType !== "empty" && (
               <svg className="absolute inset-0 size-full" viewBox="0 0 100 100">
-                <defs><filter id="ms" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0.3" dy="0.6" stdDeviation="0.4" floodColor="#000" floodOpacity="0.6" /></filter></defs>
-                <g filter="url(#ms)">
+                <defs><filter id={msId} x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0.3" dy="0.6" stdDeviation="0.4" floodColor="#000" floodOpacity="0.6" /></filter></defs>
+                <g filter={`url(#${msId})`}>
                   {markerPositions.map((p) => {
                     if (markerType === "dots") return <circle key={p.idx} cx={p.x} cy={p.y} r={2} fill={markerColor} />;
                     let label = "";
@@ -378,14 +397,14 @@ function WatchPreview({
             )}
             <svg className="absolute inset-0 size-full" viewBox="0 0 100 100">
               <defs>
-                <filter id="hs" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0.5" dy="1" stdDeviation="0.7" floodColor="#000" floodOpacity="0.65" /></filter>
-                <filter id="ss" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0.4" dy="0.8" stdDeviation="0.5" floodColor="#000" floodOpacity="0.55" /></filter>
+                <filter id={hsId} x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0.5" dy="1" stdDeviation="0.7" floodColor="#000" floodOpacity="0.65" /></filter>
+                <filter id={ssId} x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0.4" dy="0.8" stdDeviation="0.5" floodColor="#000" floodOpacity="0.55" /></filter>
               </defs>
-              <g transform={`rotate(${hourAngle}, 50, 50)`} filter="url(#hs)"><rect x="48" y="26" width="4" height="28" rx="2" fill={handsColor} /></g>
-              <g transform={`rotate(${minuteAngle}, 50, 50)`} filter="url(#hs)"><rect x="48.25" y="12" width="3.5" height="42" rx="1.75" fill={handsColor} /></g>
+              <g transform={`rotate(${hourAngle}, 50, 50)`} filter={`url(#${hsId})`}><rect x="48" y="26" width="4" height="28" rx="2" fill={handsColor} /></g>
+              <g transform={`rotate(${minuteAngle}, 50, 50)`} filter={`url(#${hsId})`}><rect x="48.25" y="12" width="3.5" height="42" rx="1.75" fill={handsColor} /></g>
               <circle cx="50" cy="50" r="4.5" fill={handsColor} />
               <circle cx="50" cy="50" r="2" fill="#000" opacity="0.45" />
-              <g transform={`rotate(${secAngle}, 50, 50)`} filter="url(#ss)">
+              <g transform={`rotate(${secAngle}, 50, 50)`} filter={`url(#${ssId})`}>
                 <line x1="50" y1="64" x2="50" y2="13.5" stroke={secondsColor} strokeWidth="0.9" strokeLinecap="round" />
                 <circle cx="50" cy="50" r="2.2" fill={secondsColor} />
                 <circle cx="50" cy="50" r="1" fill="#000" opacity="0.5" />
@@ -397,9 +416,6 @@ function WatchPreview({
       <div style={{ marginTop: -lugProtrude, position: "relative", zIndex: 0 }}>
         <Strap width={strapW} height={strapBotH} color={strapColor} material={strapMaterial} position="bottom" />
       </div>
-      <div className="mt-4 text-[#737373] uppercase tracking-[0.16em]" style={{ fontSize: 11, fontWeight: 700 }}>
-        GMT+7 · {String(time.h).padStart(2, "0")}:{String(time.m).padStart(2, "0")}:{String(time.s).padStart(2, "0")}
-      </div>
     </div>
   );
 }
@@ -409,17 +425,17 @@ function WatchPreview({
 type SummaryLine = { label: string; value: string; dot?: string; price?: string };
 
 function OrderReviewModal({
-  open, onClose, onConfirm, lines,
+  open, onClose, onConfirm, lines, caseSize,
   basePrice, sizePrice, materialPrice, caseColorPrice, dialImagePrice, extraStrapTotal, totalPrice,
 }: {
-  open: boolean; onClose: () => void; onConfirm: () => void; lines: SummaryLine[];
+  open: boolean; onClose: () => void; onConfirm: () => void; lines: SummaryLine[]; caseSize: string;
   basePrice: number; sizePrice: number; materialPrice: number; caseColorPrice: number;
   dialImagePrice: number; extraStrapTotal: number; totalPrice: number;
 }) {
   if (!open) return null;
   const breakdown = [
     { label: "Base watch",        amount: basePrice },
-    ...(sizePrice      > 0 ? [{ label: "Case size (49mm)",  amount: sizePrice }]      : []),
+    ...(sizePrice      > 0 ? [{ label: `Case size (${caseSize}mm)`, amount: sizePrice }] : []),
     ...(materialPrice  > 0 ? [{ label: "Strap material",    amount: materialPrice }]  : []),
     ...(caseColorPrice > 0 ? [{ label: "Case color",        amount: caseColorPrice }] : []),
     ...(dialImagePrice > 0 ? [{ label: "Custom dial image", amount: dialImagePrice }] : []),
@@ -503,7 +519,7 @@ function SuccessModal({ open, onClose, totalPrice }: { open: boolean; onClose: (
 // ── APP ────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [caseSize,      setCaseSize]      = useState("40");
+  const [caseSize,      setCaseSize]      = useState("64");
   const [caseColor,     setCaseColor]     = useState("black");
   const [dialTab,       setDialTab]       = useState<"color" | "upload">("color");
   const [dialColor,     setDialColor]     = useState("cream");
@@ -517,6 +533,7 @@ export default function App() {
   const [extraStraps,   setExtraStraps]   = useState<string[]>([]);
   const [showReview,    setShowReview]    = useState(false);
   const [showSuccess,   setShowSuccess]   = useState(false);
+  const [showZoom,      setShowZoom]      = useState(false);
   const [strapTab,      setStrapTab]      = useState("rubber");
 
   const fileRef            = useRef<HTMLInputElement>(null);
@@ -532,7 +549,7 @@ export default function App() {
     const prevSize = prevSizeRef.current;
     prevSizeRef.current = caseSize;
     if (prevSize === caseSize) return;
-    const flip = (map: React.MutableRefObject<Map<string, HTMLDivElement>>) => {
+    const flip = (map: React.MutableRefObject<Map<string, HTMLDivElement>>, origin: string) => {
       const prevEl = map.current.get(prevSize);
       const currEl = map.current.get(caseSize);
       if (!prevEl || !currEl) return;
@@ -540,18 +557,30 @@ export default function App() {
       const currW = currEl.getBoundingClientRect().width;
       if (!prevW || !currW) return;
       const s = prevW / currW;
-      currEl.style.transformOrigin = "50% 0%";
+      currEl.style.transformOrigin = origin;
       currEl.style.transition = "none";
       currEl.style.transform = `scale(${s})`;
       void currEl.offsetHeight;
       currEl.style.transition = "transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94)";
       currEl.style.transform = "scale(1)";
     };
-    flip(watchRefs1);
-    flip(watchRefs2);
+    flip(watchRefs1, "50% 0%");
+    flip(watchRefs2, "50% 0%");
   }, [caseSize]);
 
   const imageUploaded = !!dialImage;
+
+  const isDefault =
+    caseSize === "64" &&
+    caseColor === "black" &&
+    dialColor === "cream" &&
+    dialImage === null &&
+    markerType === "dots" &&
+    markerColor === "black" &&
+    handsColor === "silver" &&
+    secondsColor === "red" &&
+    primaryStrap === "rubber-black" &&
+    extraStraps.length === 0;
 
   const handleFile = (file: File | null) => {
     if (!file) return;
@@ -571,7 +600,7 @@ export default function App() {
 
   const handleReset = () => {
     if (dialImageRef.current) { URL.revokeObjectURL(dialImageRef.current); dialImageRef.current = null; }
-    setCaseSize("40"); setCaseColor("black"); setDialTab("color"); setDialColor("cream");
+    setCaseSize("64"); setCaseColor("black"); setDialTab("color"); setDialColor("cream");
     setDialImage(null); setDialImageName(""); setMarkerType("dots"); setMarkerColor("black");
     setHandsColor("silver"); setSecondsColor("red"); setPrimaryStrap("rubber-black"); setExtraStraps([]); setStrapTab("rubber");
   };
@@ -616,7 +645,7 @@ export default function App() {
 
   // Pricing
   const basePrice       = 120;
-  const sizePrice       = caseSize === "49" ? 30 : 0;
+  const sizePrice       = caseSize === "64" ? 30 : caseSize === "49" ? 15 : 0;
   const materialPrice   = strapMaterial === "leather" ? 25 : strapMaterial === "nylon" ? 15 : 0;
   const caseColorPrice  = ["red","silver","blush"].includes(caseColor) ? 15 : 0;
   const dialImagePrice  = dialImage ? 25 : 0;
@@ -642,8 +671,8 @@ export default function App() {
   const caseSizeInfoPanel = (
     <div className="flex flex-col gap-2.5" style={{ fontSize: 13 }}>
       <div><strong className="text-[#181612]">40mm</strong><span className="text-[#737373]"> — Compact and lightweight. Best for wrists under 17 cm.</span></div>
-      <div><strong className="text-[#181612]">44mm</strong><span className="text-[#737373]"> — The most popular size. Balanced visibility and comfort for most wrists.</span></div>
-      <div><strong className="text-[#181612]">49mm (+$30)</strong><span className="text-[#737373]"> — Bold statement sizing. Best for larger wrists.</span></div>
+      <div><strong className="text-[#181612]">49mm (+$15)</strong><span className="text-[#737373]"> — Bold statement sizing. Best for larger wrists.</span></div>
+      <div><strong className="text-[#181612]">64mm (+$30)</strong><span className="text-[#737373]"> — Oversized statement. Maximum wrist presence.</span></div>
       <p className="text-[#9e9e9e] mt-1" style={{ fontSize: 12 }}>All sizes are measured lug-to-lug. Case material: anodized stainless steel.</p>
     </div>
   );
@@ -716,6 +745,78 @@ export default function App() {
     <>
       <Navbar />
 
+      {/* MOBILE: sticky header + watch preview */}
+      <div className="lg:hidden sticky top-0 z-20" style={{ background: "#f2eee8" }}>
+        {/* Frosted header bar */}
+        <div style={{ background: "rgba(247,243,237,0.82)", backdropFilter: "blur(9px)", borderBottom: "1px solid rgba(226,221,212,0.7)", padding: "14px 16px 10px 16px" }}>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="uppercase text-[#74706a] tracking-[1.4px]" style={{ fontSize: 11, fontWeight: 700 }}>Analog Watch</div>
+              <div className="text-[#111111] leading-[24px]" style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-1.2px" }}>Customizer</div>
+            </div>
+            <div className="flex items-center gap-2">
+              {!isDefault && (
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="size-9 rounded-full border border-[#ddd5c8] text-[#b8ad9e] hover:text-[#141414] hover:border-[#555] hover:rotate-[-200deg] transition-all duration-500 flex items-center justify-center"
+                  aria-label="Reset all"
+                >
+                  <RotateCcw className="size-4" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowZoom(true)}
+                className="size-9 rounded-full border border-[#ddd5c8] text-[#b8ad9e] hover:text-[#141414] hover:border-[#555] transition-all flex items-center justify-center"
+                aria-label="Zoom watch"
+              >
+                <Maximize2 className="size-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+        {/* Watch preview section */}
+        <div style={{ position: "relative", height: 300, overflow: "hidden", borderRadius: "0 0 32px 32px", borderLeft: "2px solid rgba(255,255,255,0.88)", borderRight: "2px solid rgba(255,255,255,0.88)", borderBottom: "2px solid rgba(255,255,255,0.88)", boxShadow: "0 12px 32px rgba(0,0,0,0.10)" }}>
+          {/* Watch cluster — centered horizontally, top strap cropped by overflow:hidden */}
+          <div style={{ position: "absolute", left: "50%", top: -80, transform: "translateX(-50%)" }}>
+            {CASE_SIZES.map((size) => (
+              <div
+                key={size.id}
+                ref={(el) => { if (el) watchRefs2.current.set(size.id, el); else watchRefs2.current.delete(size.id); }}
+                style={caseSize !== size.id ? { position: "absolute", visibility: "hidden", pointerEvents: "none" } : {}}
+              >
+                <WatchPreview
+                  caseColor={caseColorHex} caseSize={size.id} dialColor={dialColorHex}
+                  dialImage={dialImage} handsColor={handsColorHex} secondsColor={secondsColorHex}
+                  markerColor={markerColorHex} markerType={markerType} strapColor={strapColorHex}
+                  strapMaterial={strapMaterial} scale={0.75}
+                />
+              </div>
+            ))}
+          </div>
+          {/* Price — bottom left */}
+          <div style={{ position: "absolute", left: 18, bottom: 52 }}>
+            <div className="uppercase text-[#737373] tracking-[1.4px]" style={{ fontSize: 10, fontWeight: 700 }}>Price</div>
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span className="text-[#000000]" style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.5px" }}>${totalPrice}</span>
+              <span className="text-[#737373]" style={{ fontSize: 10, fontWeight: 700 }}>USD</span>
+            </div>
+          </div>
+          {/* BUY NOW button */}
+          <button
+            type="button"
+            onClick={() => setShowReview(true)}
+            className="flex items-center"
+            style={{ position: "absolute", left: 18, bottom: 16, background: "#111111", color: "#ffffff", borderRadius: 999, height: 30, padding: "0 18px", fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", border: "none", cursor: "pointer" }}
+          >
+            BUY NOW
+          </button>
+          {/* GMT+7 — bottom right, fixed regardless of watch size */}
+          <TimeDisplay style={{ position: "absolute", right: 16, bottom: 16 }} />
+        </div>
+      </div>
+
       {/* Fixed price badge — desktop only, independent of watch wrapper */}
       <div className="hidden lg:block fixed z-30 px-4 pb-24 pt-2.5 pl-60" style={{ bottom: 40, left: 32 }}>
         <p className="text-[#9e9e9e] uppercase tracking-widest" style={{ fontSize: 9, fontWeight: 700 }}>Price</p>
@@ -737,13 +838,17 @@ export default function App() {
             {/* Heading + Reset button */}
             <div className="text-center">
               <div className="flex items-center justify-center gap-3">
+                {/* Counterbalance spacer so h1 stays optically centered with the <p> below */}
+                <div className="size-8 flex-shrink-0" aria-hidden="true" />
                 <h1 className="text-[#141414] tracking-[-1.5px]" style={{ fontSize: 28, fontWeight: 800 }}>Build Your Watch</h1>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
                       type="button"
                       onClick={handleReset}
-                      className="size-8 rounded-full border border-[#ddd5c8] text-[#b8ad9e] hover:text-[#141414] hover:border-[#555] hover:rotate-[-200deg] transition-all duration-500 flex items-center justify-center flex-shrink-0"
+                      aria-hidden={isDefault}
+                      tabIndex={isDefault ? -1 : 0}
+                      className={`size-8 rounded-full border border-[#ddd5c8] text-[#b8ad9e] hover:text-[#141414] hover:border-[#555] hover:rotate-[-200deg] transition-all duration-500 flex items-center justify-center flex-shrink-0 ${isDefault ? "opacity-0 pointer-events-none" : ""}`}
                       aria-label="Reset all"
                     >
                       <RotateCcw className="size-3.5" />
@@ -755,71 +860,74 @@ export default function App() {
               <p className="text-[#9e9e9e] mt-0.5" style={{ fontSize: 13 }}>Configure every detail, preview in real time.</p>
             </div>
 
-            <div className="flex-1 relative flex justify-center items-start overflow-visible">
-              {CASE_SIZES.map((size) => (
-                <div
-                  key={size.id}
-                  ref={(el) => { if (el) watchRefs1.current.set(size.id, el); else watchRefs1.current.delete(size.id); }}
-                  style={caseSize !== size.id ? { position: "absolute", visibility: "hidden", pointerEvents: "none" } : {}}
-                >
-                  <WatchPreview
-                    caseColor={caseColorHex}
-                    caseSize={size.id}
-                    dialColor={dialColorHex}
-                    dialImage={dialImage}
-                    handsColor={handsColorHex}
-                    secondsColor={secondsColorHex}
-                    markerColor={markerColorHex}
-                    markerType={markerType}
-                    strapColor={strapColorHex}
-                    strapMaterial={strapMaterial}
-                    scale={0.80}
-                  />
-                </div>
-              ))}
+            <div className="flex flex-col items-center gap-3">
+              <div
+                className="relative flex justify-center items-start overflow-visible"
+                style={{ height: 580 }}
+              >
+                {CASE_SIZES.map((size) => (
+                  <div
+                    key={size.id}
+                    ref={(el) => { if (el) watchRefs1.current.set(size.id, el); else watchRefs1.current.delete(size.id); }}
+                    style={caseSize !== size.id ? { position: "absolute", visibility: "hidden", pointerEvents: "none" } : {}}
+                  >
+                    <WatchPreview
+                      caseColor={caseColorHex}
+                      caseSize={size.id}
+                      dialColor={dialColorHex}
+                      dialImage={dialImage}
+                      handsColor={handsColorHex}
+                      secondsColor={secondsColorHex}
+                      markerColor={markerColorHex}
+                      markerType={markerType}
+                      strapColor={strapColorHex}
+                      strapMaterial={strapMaterial}
+                      scale={0.80}
+                    />
+                  </div>
+                ))}
+              </div>
+              <TimeDisplay className="flex-shrink-0" />
             </div>
           </div>
 
           {/* ── RIGHT: natural page flow ── */}
           <div className="lg:w-[54%] flex-shrink-0 lg:pr-1">
-            <div className="flex flex-col gap-3 pt-20 pb-4 lg:pt-20">
-
-              {/* Mobile: watch preview + heading + reset + price */}
-              <div className="flex lg:hidden flex-col items-center gap-4 pb-4">
-                <div className="flex items-center justify-between w-full px-1">
-                  <div>
-                    <h1 className="text-[#141414] tracking-[-1px]" style={{ fontSize: 22, fontWeight: 800 }}>Build Your Watch</h1>
-                    <p className="text-[#9e9e9e]" style={{ fontSize: 12 }}>Configure every detail.</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleReset}
-                    className="size-9 rounded-full border border-[#ddd5c8] text-[#b8ad9e] hover:text-[#141414] hover:border-[#555] hover:rotate-[-200deg] transition-all duration-500 flex items-center justify-center flex-shrink-0"
-                    aria-label="Reset all"
-                  >
-                    <RotateCcw className="size-4" />
-                  </button>
-                </div>
-                <div className="relative w-full flex justify-center">
-                  {CASE_SIZES.map((size) => (
-                    <div
-                      key={size.id}
-                      ref={(el) => { if (el) watchRefs2.current.set(size.id, el); else watchRefs2.current.delete(size.id); }}
-                      style={caseSize !== size.id ? { position: "absolute", visibility: "hidden", pointerEvents: "none" } : {}}
-                    >
-                      <WatchPreview
-                        caseColor={caseColorHex} caseSize={size.id} dialColor={dialColorHex}
-                        dialImage={dialImage} handsColor={handsColorHex} secondsColor={secondsColorHex}
-                        markerColor={markerColorHex} markerType={markerType} strapColor={strapColorHex}
-                        strapMaterial={strapMaterial} scale={0.7}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
+            <div className="flex flex-col gap-3 pt-4 pb-4 lg:pt-20">
 
               <Section title="Case Size" info={caseSizeInfoPanel}>
-                <PillRow options={CASE_SIZES} value={caseSize} onChange={setCaseSize} />
+                {/* Mobile: large card grid */}
+                <div className="lg:hidden grid grid-cols-3 gap-3">
+                  {CASE_SIZES.map((size) => {
+                    const active = caseSize === size.id;
+                    return (
+                      <button
+                        key={size.id}
+                        type="button"
+                        onClick={() => setCaseSize(size.id)}
+                        className={`relative aspect-[3/4] rounded-[28px] border transition-all flex items-center justify-center ${
+                          active
+                            ? "bg-[#111] text-white border-[#111] shadow-[0px_8px_12px_rgba(0,0,0,0.14)]"
+                            : "bg-white text-[#141414] border-[#ded9d1] hover:border-[#111]"
+                        }`}
+                      >
+                        <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.5px" }}>{size.label}</span>
+                        {size.price && size.price !== "Included" && (
+                          <span
+                            className={`absolute bottom-3 ${active ? "text-white/60" : "text-[#9e9e9e]"}`}
+                            style={{ fontSize: 10, fontWeight: 600 }}
+                          >
+                            {size.price}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* Desktop: original pill row */}
+                <div className="hidden lg:block">
+                  <PillRow options={CASE_SIZES} value={caseSize} onChange={setCaseSize} />
+                </div>
               </Section>
 
               <Section title="Case Color" info={caseColorInfoPanel}>
@@ -864,7 +972,7 @@ export default function App() {
 
               <Section title="Hour Marker Type" info={hourMarkerTypeInfoPanel}>
                 <div className={imageUploaded ? "opacity-60 pointer-events-none" : ""}>
-                  <div className="flex flex-wrap items-start gap-3">
+                  <div className="grid grid-cols-2 lg:flex lg:flex-wrap items-start gap-3">
                     {[
                       { id: "arabic", preview: <span className={`text-[34px] tracking-[-1.4px] leading-none ${markerType === "arabic" ? "text-white/80" : "text-black/80"}`}>1-12</span> },
                       { id: "roman",  preview: <span className={`text-[28px] tracking-[-0.8px] leading-none ${markerType === "roman"  ? "text-white/80" : "text-black/80"}`}>XII</span> },
@@ -878,8 +986,8 @@ export default function App() {
                       const label = HOUR_MARKER_TYPES.find((m) => m.id === id)?.label ?? id;
                       const active = markerType === id;
                       return (
-                        <button key={id} type="button" onClick={() => setMarkerType(id)} className="flex flex-col gap-1.5 items-center">
-                          <div className={`flex items-center justify-center h-[100px] w-[90px] rounded-[24px] transition ${active ? "bg-[#111] shadow-[0px_10px_12px_rgba(0,0,0,0.14)]" : "bg-white border border-[#ded9d1] hover:border-[#111]"}`}>
+                        <button key={id} type="button" onClick={() => setMarkerType(id)} className="flex flex-col gap-1.5 items-center w-full lg:w-auto">
+                          <div className={`flex items-center justify-center w-full lg:w-[90px] aspect-[9/10] lg:aspect-auto lg:h-[100px] rounded-[24px] transition ${active ? "bg-[#111] shadow-[0px_10px_12px_rgba(0,0,0,0.14)]" : "bg-white border border-[#ded9d1] hover:border-[#111]"}`}>
                             {preview}
                           </div>
                           <span className="text-[#272727]" style={{ fontSize: 14 }}>{label}</span>
@@ -966,7 +1074,7 @@ export default function App() {
                           <div
                             key={o.id}
                             onClick={() => setPrimaryStrap(o.id)}
-                            className={`flex items-center gap-3 rounded-2xl px-4 py-2.5 border transition-all cursor-pointer ${
+                            className={`group flex items-center gap-3 rounded-2xl px-4 py-2.5 border transition-all cursor-pointer ${
                               isPrimary ? "bg-[#111] border-[#111]" : "bg-white/60 hover:border-[#888]"
                             }`}
                           >
@@ -975,65 +1083,60 @@ export default function App() {
                                 className="rounded-full size-8 ring-1 ring-black/10"
                                 style={{ background: o.color, boxShadow: "inset 0px -2px 4px rgba(0,0,0,0.08), inset 0px 2px 4px rgba(255,255,255,0.18)" }}
                               />
-                              {extraCount > 0 && (
-                                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-[#2563eb] text-white flex items-center justify-center px-1 pointer-events-none" style={{ fontSize: 8, fontWeight: 800 }}>
-                                  {extraCount}
-                                </span>
-                              )}
+
                             </div>
 
                             <div className="flex-1 min-w-0">
-                              <div className={isPrimary ? "text-white" : "text-[#181612]"} style={{ fontSize: 13, fontWeight: 600 }}>{o.label}</div>
-                              {extraCount > 0 && (
-                                <div className={isPrimary ? "text-white/50" : "text-[#8a8275]"} style={{ fontSize: 10 }}>+${priceEach} each · +${priceEach * extraCount} total</div>
-                              )}
-                            </div>
+                              <div className="flex items-center gap-2">
+                                <span className={isPrimary ? "text-white" : "text-[#181612]"} style={{ fontSize: 13, fontWeight: 600 }}>{o.label}</span>
+                                {isPrimary && (
+                                  <span className="text-white/60 uppercase tracking-widest" style={{ fontSize: 9, fontWeight: 700 }}>Main</span>
+                                )}
+                              </div>
 
-                            {isPrimary && (
-                              <span className="text-white/60 uppercase tracking-widest flex-shrink-0" style={{ fontSize: 9, fontWeight: 700 }}>Main</span>
-                            )}
+                            </div>
 
                             {extraCount > 0 ? (
                               <div className="flex items-center gap-1 flex-shrink-0">
                                 <button
                                   type="button"
                                   onClick={(e) => { e.stopPropagation(); removeOneExtraStrap(o.id); }}
-                                  className={`size-6 rounded-full border flex items-center justify-center transition ${
+                                  aria-label="Remove one"
+                                  className={`size-10 lg:size-6 rounded-full border flex items-center justify-center transition ${
                                     isPrimary ? "border-white/30 text-white/70 hover:bg-white/10" : "border-[#ded9d1] text-[#444] hover:bg-black/5"
                                   }`}
-                                  style={{ fontSize: 14, lineHeight: 1 }}
-                                >−</button>
-                                <span className={`w-4 text-center ${isPrimary ? "text-white" : "text-[#181612]"}`} style={{ fontSize: 12, fontWeight: 700 }}>{extraCount}</span>
+                                >
+                                  <Minus className="size-4 lg:size-3" strokeWidth={2.5} />
+                                </button>
+                                <span className={`w-5 lg:w-4 text-center text-sm lg:text-xs font-bold ${isPrimary ? "text-white" : "text-[#181612]"}`}>{extraCount}</span>
                                 <button
                                   type="button"
                                   onClick={(e) => { e.stopPropagation(); addExtraStrap(o.id); }}
-                                  className={`size-6 rounded-full border flex items-center justify-center transition ${
+                                  aria-label="Add one"
+                                  className={`size-10 lg:size-6 rounded-full border flex items-center justify-center transition ${
                                     isPrimary ? "border-white/30 text-white/70 hover:bg-white/10" : "border-[#ded9d1] text-[#444] hover:bg-black/5"
                                   }`}
-                                  style={{ fontSize: 14, lineHeight: 1 }}
-                                >+</button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); removeAllExtraStrap(o.id); }}
-                                  className={`size-6 rounded-full flex items-center justify-center transition ${
-                                    isPrimary ? "text-white/50 hover:text-white hover:bg-white/10" : "text-[#aaa] hover:text-[#333] hover:bg-black/5"
-                                  }`}
-                                  aria-label="Remove all"
-                                ><X className="size-3" /></button>
+                                >
+                                  <Plus className="size-4 lg:size-3" strokeWidth={2.5} />
+                                </button>
+
                               </div>
                             ) : (
                               <button
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); addExtraStrap(o.id); }}
-                                className={`h-7 px-3 rounded-full border flex items-center gap-1 transition-all flex-shrink-0 ${
-                                  isPrimary
-                                    ? "border-white/30 text-white/80 hover:border-white hover:bg-white/10"
-                                    : "border-[#ded9d1] text-[#555] hover:bg-[#111] hover:text-white hover:border-[#111]"
-                                }`}
-                                style={{ fontSize: 11, fontWeight: 700 }}
+                                aria-label="Add extra"
+                                className={`flex items-center justify-center flex-shrink-0 rounded-full transition-all
+                                  size-10 lg:h-7 lg:w-auto lg:px-3 lg:gap-1
+                                  lg:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100
+                                  ${
+                                    isPrimary
+                                      ? "bg-white/20 text-white active:bg-white/30 lg:bg-transparent lg:text-white/80 lg:border lg:border-white/30 lg:hover:border-white lg:hover:bg-white/10"
+                                      : "bg-[#1a1a1a] text-white active:bg-[#333] lg:bg-transparent lg:text-[#555] lg:border lg:border-[#ded9d1] lg:hover:bg-[#111] lg:hover:text-white lg:hover:border-[#111]"
+                                  }`}
                               >
-                                <Plus className="size-3 flex-shrink-0" />
-                                <span>Add Extra</span>
+                                <Plus className="size-5 lg:size-3 flex-shrink-0" strokeWidth={2.5} />
+                                <span className="hidden lg:inline text-[11px] font-bold tracking-wide">Add Extra</span>
                               </button>
                             )}
                           </div>
@@ -1054,8 +1157,8 @@ export default function App() {
 
             </div>{/* end sections */}
 
-            {/* Sticky Review & Order */}
-            <div className="sticky bottom-0 z-10">
+            {/* Sticky Review & Order — desktop only; mobile uses BUY NOW in the preview area */}
+            <div className="hidden lg:block sticky bottom-0 z-10">
               <div className="pb-12" style={{ background: "#F2EEE8", borderTopLeftRadius: 32, borderTopRightRadius: 32 }}>
                 <button
                   type="button"
@@ -1064,8 +1167,6 @@ export default function App() {
                   style={{ fontSize: 15, fontWeight: 700, letterSpacing: "0.03em", height: 52 }}
                 >
                   <span>Review &amp; Order</span>
-                  {/* Price badge: visible only on mobile since desktop shows it in the left panel */}
-                  <span className="lg:hidden bg-white/15 px-3 py-1 rounded-full" style={{ fontSize: 14, fontWeight: 800 }}>${totalPrice}</span>
                 </button>
               </div>
             </div>
@@ -1078,6 +1179,7 @@ export default function App() {
         onClose={() => setShowReview(false)}
         onConfirm={handleConfirmOrder}
         lines={summaryLines}
+        caseSize={caseSize}
         basePrice={basePrice}
         sizePrice={sizePrice}
         materialPrice={materialPrice}
@@ -1088,6 +1190,57 @@ export default function App() {
       />
 
       <SuccessModal open={showSuccess} onClose={() => setShowSuccess(false)} totalPrice={totalPrice} />
+
+      {showZoom && (
+        <div className="fixed inset-0 z-50 lg:hidden flex flex-col" style={{ background: "#f2eee8" }}>
+          {/* Header */}
+          <div style={{ background: "rgba(247,243,237,0.95)", backdropFilter: "blur(9px)", borderBottom: "1px solid rgba(226,221,212,0.7)", padding: "14px 16px 10px 16px" }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="uppercase text-[#74706a] tracking-[1.4px]" style={{ fontSize: 11, fontWeight: 700 }}>Analog Watch</div>
+                <div className="text-[#111111] leading-[24px]" style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-1.2px" }}>Customizer</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowZoom(false)}
+                className="size-9 rounded-full border border-[#ddd5c8] text-[#b8ad9e] hover:text-[#141414] hover:border-[#555] transition-all flex items-center justify-center"
+                aria-label="Close zoom"
+              >
+                <Minimize2 className="size-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Watch centered */}
+          <div className="flex-1 flex items-center justify-center overflow-auto py-6">
+            <WatchPreview
+              caseColor={caseColorHex} caseSize={caseSize} dialColor={dialColorHex}
+              dialImage={dialImage} handsColor={handsColorHex} secondsColor={secondsColorHex}
+              markerColor={markerColorHex} markerType={markerType} strapColor={strapColorHex}
+              strapMaterial={strapMaterial} scale={0.78}
+            />
+          </div>
+
+          {/* Price + Buy now bottom left */}
+          <div style={{ position: "absolute", left: 18, bottom: 18 }}>
+            <div className="uppercase text-[#737373] tracking-[1.4px]" style={{ fontSize: 10, fontWeight: 700 }}>Estimate Price</div>
+            <div className="flex items-baseline gap-1 mt-0.5 mb-2">
+              <span className="text-[#000000]" style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.5px" }}>${totalPrice}.00</span>
+              <span className="text-[#737373]" style={{ fontSize: 10, fontWeight: 700 }}>USD</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setShowZoom(false); setShowReview(true); }}
+              className="flex items-center"
+              style={{ background: "#111111", color: "#ffffff", borderRadius: 999, height: 30, padding: "0 18px", fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", border: "none", cursor: "pointer" }}
+            >
+              BUY NOW
+            </button>
+          </div>
+          {/* GMT+7 — bottom right, fixed regardless of watch size */}
+          <TimeDisplay style={{ position: "absolute", right: 18, bottom: 18 }} />
+        </div>
+      )}
     </>
   );
 }
