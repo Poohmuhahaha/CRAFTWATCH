@@ -523,28 +523,32 @@ export default function App() {
   const dialImageRef       = useRef<string | null>(null);
   useEffect(() => { return () => { if (dialImageRef.current) URL.revokeObjectURL(dialImageRef.current); }; }, []);
 
-  const watchAnimRef1    = useRef<HTMLDivElement>(null);
-  const watchAnimRef2    = useRef<HTMLDivElement>(null);
-  const sizeAnimMountRef = useRef(true);
-  const prevSizeValRef   = useRef(Number(caseSize));
+  const watchRefs1       = useRef<Map<string, HTMLDivElement>>(new Map());
+  const watchRefs2       = useRef<Map<string, HTMLDivElement>>(new Map());
+  const prevSizeRef      = useRef(caseSize);
+  const sizeAnimMount    = useRef(true);
   useLayoutEffect(() => {
-    if (sizeAnimMountRef.current) { sizeAnimMountRef.current = false; return; }
-    const prevStr = String(prevSizeValRef.current);
-    const renderedW = (size: string, sc: number) =>
-      Math.round((CASE_SIZE_PX[size] ?? 224) * sc) + 50;
-    const animate = (ref: React.RefObject<HTMLDivElement | null>, sc: number) => {
-      if (!ref.current) return;
-      const s = 1 + (renderedW(prevStr, sc) / renderedW(caseSize, sc) - 1) * 0.5;
-      ref.current.style.transformOrigin = "50% 42%";
-      ref.current.style.transition = "none";
-      ref.current.style.transform  = `scale(${s})`;
-      void ref.current.offsetHeight;
-      ref.current.style.transition = "transform 0.22s ease-out";
-      ref.current.style.transform  = "scale(1)";
+    if (sizeAnimMount.current) { sizeAnimMount.current = false; return; }
+    const prevSize = prevSizeRef.current;
+    prevSizeRef.current = caseSize;
+    if (prevSize === caseSize) return;
+    const flip = (map: React.MutableRefObject<Map<string, HTMLDivElement>>) => {
+      const prevEl = map.current.get(prevSize);
+      const currEl = map.current.get(caseSize);
+      if (!prevEl || !currEl) return;
+      const prevW = prevEl.getBoundingClientRect().width;
+      const currW = currEl.getBoundingClientRect().width;
+      if (!prevW || !currW) return;
+      const s = prevW / currW;
+      currEl.style.transformOrigin = "50% 0%";
+      currEl.style.transition = "none";
+      currEl.style.transform = `scale(${s})`;
+      void currEl.offsetHeight;
+      currEl.style.transition = "transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94)";
+      currEl.style.transform = "scale(1)";
     };
-    prevSizeValRef.current = Number(caseSize);
-    animate(watchAnimRef1, 0.80);
-    animate(watchAnimRef2, 0.70);
+    flip(watchRefs1);
+    flip(watchRefs2);
   }, [caseSize]);
 
   const imageUploaded = !!dialImage;
@@ -752,21 +756,27 @@ export default function App() {
             </div>
 
             <div className="flex-1 relative flex justify-center items-start overflow-visible">
-              <div ref={watchAnimRef1}>
-                <WatchPreview
-                  caseColor={caseColorHex}
-                  caseSize={caseSize}
-                  dialColor={dialColorHex}
-                  dialImage={dialImage}
-                  handsColor={handsColorHex}
-                  secondsColor={secondsColorHex}
-                  markerColor={markerColorHex}
-                  markerType={markerType}
-                  strapColor={strapColorHex}
-                  strapMaterial={strapMaterial}
-                  scale={0.80}
-                />
-              </div>
+              {CASE_SIZES.map((size) => (
+                <div
+                  key={size.id}
+                  ref={(el) => { if (el) watchRefs1.current.set(size.id, el); else watchRefs1.current.delete(size.id); }}
+                  style={caseSize !== size.id ? { position: "absolute", visibility: "hidden", pointerEvents: "none" } : {}}
+                >
+                  <WatchPreview
+                    caseColor={caseColorHex}
+                    caseSize={size.id}
+                    dialColor={dialColorHex}
+                    dialImage={dialImage}
+                    handsColor={handsColorHex}
+                    secondsColor={secondsColorHex}
+                    markerColor={markerColorHex}
+                    markerType={markerType}
+                    strapColor={strapColorHex}
+                    strapMaterial={strapMaterial}
+                    scale={0.80}
+                  />
+                </div>
+              ))}
             </div>
           </div>
 
@@ -791,14 +801,20 @@ export default function App() {
                   </button>
                 </div>
                 <div className="relative w-full flex justify-center">
-                  <div ref={watchAnimRef2}>
-                    <WatchPreview
-                      caseColor={caseColorHex} caseSize={caseSize} dialColor={dialColorHex}
-                      dialImage={dialImage} handsColor={handsColorHex} secondsColor={secondsColorHex}
-                      markerColor={markerColorHex} markerType={markerType} strapColor={strapColorHex}
-                      strapMaterial={strapMaterial} scale={0.7}
-                    />
-                  </div>
+                  {CASE_SIZES.map((size) => (
+                    <div
+                      key={size.id}
+                      ref={(el) => { if (el) watchRefs2.current.set(size.id, el); else watchRefs2.current.delete(size.id); }}
+                      style={caseSize !== size.id ? { position: "absolute", visibility: "hidden", pointerEvents: "none" } : {}}
+                    >
+                      <WatchPreview
+                        caseColor={caseColorHex} caseSize={size.id} dialColor={dialColorHex}
+                        dialImage={dialImage} handsColor={handsColorHex} secondsColor={secondsColorHex}
+                        markerColor={markerColorHex} markerType={markerType} strapColor={strapColorHex}
+                        strapMaterial={strapMaterial} scale={0.7}
+                      />
+                    </div>
+                  ))}
                 </div>
               </div>
 
