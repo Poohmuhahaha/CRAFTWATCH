@@ -6,7 +6,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "./components/ui/tooltip
 
 // ── TYPES ─────────────────────────────────────────────────────────────────
 
-type Pill   = { id: string; label: string; price?: string };
+type Pill   = { id: string; label: string; price?: string; isNew?: boolean };
 type Swatch = { id: string; label: string; color: string; price?: string };
 type StrapGroup = { id: string; label: string; price: string; colors: Swatch[] };
 
@@ -14,8 +14,9 @@ type StrapGroup = { id: string; label: string; price: string; colors: Swatch[] }
 
 const CASE_SIZES: Pill[] = [
   { id: "40", label: "40mm", price: "Included" },
+  { id: "44", label: "44mm", price: "Included" },
   { id: "49", label: "49mm", price: "+$15" },
-  { id: "64", label: "64mm", price: "+$30" },
+  { id: "64", label: "64mm", price: "+$30", isNew: true },
 ];
 
 const CASE_COLORS: Swatch[] = [
@@ -91,7 +92,7 @@ const STRAP_GROUPS: StrapGroup[] = [
 ];
 
 const ALL_STRAPS: Swatch[] = STRAP_GROUPS.flatMap((g) => g.colors);
-const CASE_SIZE_PX: Record<string, number> = { "40": 180, "49": 200, "64": 220 };
+const CASE_SIZE_PX: Record<string, number> = { "40": 180, "44": 190, "49": 200, "64": 220 };
 
 const getGMT7 = () => {
   const now = new Date();
@@ -207,11 +208,20 @@ function PillRow({ options, value, onChange }: { options: Pill[]; value: string;
             key={o.id}
             type="button"
             onClick={() => onChange(o.id)}
-            className={`flex flex-col items-center justify-center min-h-[42px] px-4 py-1.5 rounded-full border transition-all ${
+            className={`relative flex flex-col items-center justify-center min-h-[42px] px-4 py-1.5 rounded-full border transition-all ${
               active ? "bg-[#111] text-white border-[#111] shadow-[0px_8px_12px_rgba(0,0,0,0.14)]" : "bg-white text-[#141414] border-[#ded9d1] hover:border-[#111]"
             }`}
             style={{ fontSize: 15 }}
           >
+            {o.isNew && (
+              <span
+                className={`absolute -top-1.5 -right-1.5 px-1.5 py-0.5 rounded-full text-[8px] font-bold tracking-wider ${
+                  active ? "bg-white text-[#111]" : "bg-[#b7121f] text-white"
+                }`}
+              >
+                NEW
+              </span>
+            )}
             <span>{o.label}</span>
             {o.price && <span className={`mt-0.5 ${active ? "text-white/60" : "text-[#9e9e9e]"}`} style={{ fontSize: 10, fontWeight: 600 }}>{o.price}</span>}
           </button>
@@ -519,7 +529,7 @@ function SuccessModal({ open, onClose, totalPrice }: { open: boolean; onClose: (
 // ── APP ────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [caseSize,      setCaseSize]      = useState("64");
+  const [caseSize,      setCaseSize]      = useState("40");
   const [caseColor,     setCaseColor]     = useState("black");
   const [dialTab,       setDialTab]       = useState<"color" | "upload">("color");
   const [dialColor,     setDialColor]     = useState("cream");
@@ -539,6 +549,14 @@ export default function App() {
   const fileRef            = useRef<HTMLInputElement>(null);
   const dialImageRef       = useRef<string | null>(null);
   useEffect(() => { return () => { if (dialImageRef.current) URL.revokeObjectURL(dialImageRef.current); }; }, []);
+
+  // Lock body scroll while the mobile preview is expanded so the page beneath doesn't peek/scroll
+  useEffect(() => {
+    if (!showZoom) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [showZoom]);
 
   const watchRefs1       = useRef<Map<string, HTMLDivElement>>(new Map());
   const watchRefs2       = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -571,7 +589,7 @@ export default function App() {
   const imageUploaded = !!dialImage;
 
   const isDefault =
-    caseSize === "64" &&
+    caseSize === "40" &&
     caseColor === "black" &&
     dialColor === "cream" &&
     dialImage === null &&
@@ -600,7 +618,7 @@ export default function App() {
 
   const handleReset = () => {
     if (dialImageRef.current) { URL.revokeObjectURL(dialImageRef.current); dialImageRef.current = null; }
-    setCaseSize("64"); setCaseColor("black"); setDialTab("color"); setDialColor("cream");
+    setCaseSize("40"); setCaseColor("black"); setDialTab("color"); setDialColor("cream");
     setDialImage(null); setDialImageName(""); setMarkerType("dots"); setMarkerColor("black");
     setHandsColor("silver"); setSecondsColor("red"); setPrimaryStrap("rubber-black"); setExtraStraps([]); setStrapTab("rubber");
   };
@@ -671,8 +689,9 @@ export default function App() {
   const caseSizeInfoPanel = (
     <div className="flex flex-col gap-2.5" style={{ fontSize: 13 }}>
       <div><strong className="text-[#181612]">40mm</strong><span className="text-[#737373]"> — Compact and lightweight. Best for wrists under 17 cm.</span></div>
+      <div><strong className="text-[#181612]">44mm</strong><span className="text-[#737373]"> — The most popular size. Balanced visibility and comfort for most wrists.</span></div>
       <div><strong className="text-[#181612]">49mm (+$15)</strong><span className="text-[#737373]"> — Bold statement sizing. Best for larger wrists.</span></div>
-      <div><strong className="text-[#181612]">64mm (+$30)</strong><span className="text-[#737373]"> — Oversized statement. Maximum wrist presence.</span></div>
+      <div><strong className="text-[#181612]">64mm (+$30) · NEW</strong><span className="text-[#737373]"> — Oversized statement. Maximum wrist presence.</span></div>
       <p className="text-[#9e9e9e] mt-1" style={{ fontSize: 12 }}>All sizes are measured lug-to-lug. Case material: anodized stainless steel.</p>
     </div>
   );
@@ -767,19 +786,41 @@ export default function App() {
               )}
               <button
                 type="button"
-                onClick={() => setShowZoom(true)}
+                onClick={() => setShowZoom((z) => !z)}
                 className="size-9 rounded-full border border-[#ddd5c8] text-[#b8ad9e] hover:text-[#141414] hover:border-[#555] transition-all flex items-center justify-center"
-                aria-label="Zoom watch"
+                aria-label={showZoom ? "Collapse preview" : "Zoom preview"}
               >
-                <Maximize2 className="size-4" />
+                {showZoom ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
               </button>
             </div>
           </div>
         </div>
-        {/* Watch preview section */}
-        <div style={{ position: "relative", height: 300, overflow: "hidden", borderRadius: "0 0 32px 32px", borderLeft: "2px solid rgba(255,255,255,0.88)", borderRight: "2px solid rgba(255,255,255,0.88)", borderBottom: "2px solid rgba(255,255,255,0.88)", boxShadow: "0 12px 32px rgba(0,0,0,0.10)" }}>
-          {/* Watch cluster — centered horizontally, top strap cropped by overflow:hidden */}
-          <div style={{ position: "absolute", left: "50%", top: -80, transform: "translateX(-50%)" }}>
+        {/* Watch preview section — expands in-place when Zoom is clicked */}
+        <div
+          style={{
+            position: "relative",
+            height: showZoom ? "calc(100vh - 76px)" : 300,
+            overflow: "hidden",
+            borderRadius: showZoom ? "0px" : "0 0 32px 32px",
+            borderLeft: "2px solid rgba(255,255,255,0.88)",
+            borderRight: "2px solid rgba(255,255,255,0.88)",
+            borderBottom: showZoom ? "none" : "2px solid rgba(255,255,255,0.88)",
+            boxShadow: showZoom ? "none" : "0 12px 32px rgba(0,0,0,0.10)",
+            willChange: "height, border-radius",
+            transition: "height 0.6s cubic-bezier(0.32, 0.72, 0, 1), border-radius 0.6s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.6s cubic-bezier(0.32, 0.72, 0, 1)",
+          }}
+        >
+          {/* Watch cluster — anchored higher when normal, centered when zoomed */}
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: showZoom ? "50%" : "-80px",
+              transform: showZoom ? "translate3d(-50%, -50%, 0)" : "translate3d(-50%, 0, 0)",
+              willChange: "top, transform",
+              transition: "top 0.6s cubic-bezier(0.32, 0.72, 0, 1), transform 0.6s cubic-bezier(0.32, 0.72, 0, 1)",
+            }}
+          >
             {CASE_SIZES.map((size) => (
               <div
                 key={size.id}
@@ -818,10 +859,10 @@ export default function App() {
       </div>
 
       {/* Fixed price badge — desktop only, independent of watch wrapper */}
-      <div className="hidden lg:block fixed z-30 px-4 pb-24 pt-2.5 pl-60" style={{ bottom: 40, left: 32 }}>
+      <div className="hidden lg:block fixed z-30 px-4 pt-2.5 pl-60" style={{ bottom: 40, left: 32 }}>
         <p className="text-[#9e9e9e] uppercase tracking-widest" style={{ fontSize: 9, fontWeight: 700 }}>Price</p>
         <div className="flex items-baseline gap-1 mt-0.5">
-          <span className="text-[#141414] tracking-tighter" style={{ fontSize: 28, fontWeight: 800 }}>${totalPrice}</span>
+          <span className="text-[#141414] tracking-tighter" style={{ fontSize: 50, fontWeight: 800 }}>${totalPrice}</span>
           <span className="text-[#737373]" style={{ fontSize: 11, fontWeight: 600 }}>USD</span>
         </div>
       </div>
@@ -863,7 +904,7 @@ export default function App() {
             <div className="flex flex-col items-center gap-3">
               <div
                 className="relative flex justify-center items-start overflow-visible"
-                style={{ height: 580 }}
+                style={{ height: 720 }}
               >
                 {CASE_SIZES.map((size) => (
                   <div
@@ -882,7 +923,7 @@ export default function App() {
                       markerType={markerType}
                       strapColor={strapColorHex}
                       strapMaterial={strapMaterial}
-                      scale={0.80}
+                      scale={1.00}
                     />
                   </div>
                 ))}
@@ -896,8 +937,8 @@ export default function App() {
             <div className="flex flex-col gap-3 pt-4 pb-4 lg:pt-20">
 
               <Section title="Case Size" info={caseSizeInfoPanel}>
-                {/* Mobile: large card grid */}
-                <div className="lg:hidden grid grid-cols-3 gap-3">
+                {/* Mobile: card grid (2x2 for 4 sizes) */}
+                <div className="lg:hidden grid grid-cols-2 gap-3">
                   {CASE_SIZES.map((size) => {
                     const active = caseSize === size.id;
                     return (
@@ -905,12 +946,21 @@ export default function App() {
                         key={size.id}
                         type="button"
                         onClick={() => setCaseSize(size.id)}
-                        className={`relative aspect-[3/4] rounded-[28px] border transition-all flex items-center justify-center ${
+                        className={`relative aspect-[1/1] rounded-[28px] border transition-all flex items-center justify-center ${
                           active
                             ? "bg-[#111] text-white border-[#111] shadow-[0px_8px_12px_rgba(0,0,0,0.14)]"
                             : "bg-white text-[#141414] border-[#ded9d1] hover:border-[#111]"
                         }`}
                       >
+                        {size.isNew && (
+                          <span
+                            className={`absolute top-3 right-3 px-1.5 py-0.5 rounded-full text-[9px] font-bold tracking-wider ${
+                              active ? "bg-white text-[#111]" : "bg-[#b7121f] text-white"
+                            }`}
+                          >
+                            NEW
+                          </span>
+                        )}
                         <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.5px" }}>{size.label}</span>
                         {size.price && size.price !== "Included" && (
                           <span
@@ -1191,56 +1241,6 @@ export default function App() {
 
       <SuccessModal open={showSuccess} onClose={() => setShowSuccess(false)} totalPrice={totalPrice} />
 
-      {showZoom && (
-        <div className="fixed inset-0 z-50 lg:hidden flex flex-col" style={{ background: "#f2eee8" }}>
-          {/* Header */}
-          <div style={{ background: "rgba(247,243,237,0.95)", backdropFilter: "blur(9px)", borderBottom: "1px solid rgba(226,221,212,0.7)", padding: "14px 16px 10px 16px" }}>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="uppercase text-[#74706a] tracking-[1.4px]" style={{ fontSize: 11, fontWeight: 700 }}>Analog Watch</div>
-                <div className="text-[#111111] leading-[24px]" style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-1.2px" }}>Customizer</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowZoom(false)}
-                className="size-9 rounded-full border border-[#ddd5c8] text-[#b8ad9e] hover:text-[#141414] hover:border-[#555] transition-all flex items-center justify-center"
-                aria-label="Close zoom"
-              >
-                <Minimize2 className="size-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Watch centered */}
-          <div className="flex-1 flex items-center justify-center overflow-auto py-6">
-            <WatchPreview
-              caseColor={caseColorHex} caseSize={caseSize} dialColor={dialColorHex}
-              dialImage={dialImage} handsColor={handsColorHex} secondsColor={secondsColorHex}
-              markerColor={markerColorHex} markerType={markerType} strapColor={strapColorHex}
-              strapMaterial={strapMaterial} scale={0.78}
-            />
-          </div>
-
-          {/* Price + Buy now bottom left */}
-          <div style={{ position: "absolute", left: 18, bottom: 18 }}>
-            <div className="uppercase text-[#737373] tracking-[1.4px]" style={{ fontSize: 10, fontWeight: 700 }}>Estimate Price</div>
-            <div className="flex items-baseline gap-1 mt-0.5 mb-2">
-              <span className="text-[#000000]" style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.5px" }}>${totalPrice}.00</span>
-              <span className="text-[#737373]" style={{ fontSize: 10, fontWeight: 700 }}>USD</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => { setShowZoom(false); setShowReview(true); }}
-              className="flex items-center"
-              style={{ background: "#111111", color: "#ffffff", borderRadius: 999, height: 30, padding: "0 18px", fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", border: "none", cursor: "pointer" }}
-            >
-              BUY NOW
-            </button>
-          </div>
-          {/* GMT+7 — bottom right, fixed regardless of watch size */}
-          <TimeDisplay style={{ position: "absolute", right: 18, bottom: 18 }} />
-        </div>
-      )}
     </>
   );
 }
