@@ -544,6 +544,7 @@ export default function App() {
   const [showReview,    setShowReview]    = useState(false);
   const [showSuccess,   setShowSuccess]   = useState(false);
   const [showZoom,      setShowZoom]      = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [strapTab,      setStrapTab]      = useState("rubber");
 
   const fileRef            = useRef<HTMLInputElement>(null);
@@ -777,7 +778,7 @@ export default function App() {
               {!isDefault && (
                 <button
                   type="button"
-                  onClick={handleReset}
+                  onClick={() => setShowResetConfirm(true)}
                   className="size-9 rounded-full border border-[#ddd5c8] text-[#b8ad9e] hover:text-[#141414] hover:border-[#555] hover:rotate-[-200deg] transition-all duration-500 flex items-center justify-center"
                   aria-label="Reset all"
                 >
@@ -886,7 +887,7 @@ export default function App() {
                   <TooltipTrigger asChild>
                     <button
                       type="button"
-                      onClick={handleReset}
+                      onClick={() => setShowResetConfirm(true)}
                       aria-hidden={isDefault}
                       tabIndex={isDefault ? -1 : 0}
                       className={`size-8 rounded-full border border-[#ddd5c8] text-[#b8ad9e] hover:text-[#141414] hover:border-[#555] hover:rotate-[-200deg] transition-all duration-500 flex items-center justify-center flex-shrink-0 ${isDefault ? "opacity-0 pointer-events-none" : ""}`}
@@ -1240,6 +1241,42 @@ export default function App() {
       />
 
       <SuccessModal open={showSuccess} onClose={() => setShowSuccess(false)} totalPrice={totalPrice} />
+
+      {showResetConfirm && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(5px)" }}
+          onClick={() => setShowResetConfirm(false)}
+        >
+          <div
+            className="bg-white rounded-[24px] w-full max-w-sm p-6 shadow-[0_24px_60px_rgba(0,0,0,0.25)] flex flex-col gap-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col gap-1.5 text-center">
+              <h2 className="text-[#141414] tracking-[-0.6px]" style={{ fontSize: 20, fontWeight: 800 }}>Reset all customizations?</h2>
+              <p className="text-[#737373]" style={{ fontSize: 13 }}>This will undo every change you've made. You can't undo this action.</p>
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <button
+                type="button"
+                onClick={() => setShowResetConfirm(false)}
+                className="flex-1 h-11 rounded-full border border-[#ded9d1] text-[#141414] hover:bg-black/5 transition"
+                style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.02em" }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => { handleReset(); setShowResetConfirm(false); }}
+                className="flex-1 h-11 rounded-full bg-[#111] text-white hover:bg-[#333] active:scale-[0.98] transition-all"
+                style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.02em" }}
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </>
   );
