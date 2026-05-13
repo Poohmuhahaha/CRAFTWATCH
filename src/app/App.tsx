@@ -109,6 +109,13 @@ function WristReference({ show, zoom = 1, variant = "skin" }: { show: boolean; z
   const isLine = variant === "line";
   const armPath = "M 0 195 Q 200 188, 400 192 Q 600 196, 800 200 Q 1000 204, 1200 200 Q 1340 196, 1400 192 L 1400 426 Q 1340 422, 1200 422 Q 1000 424, 800 422 Q 600 420, 400 422 Q 200 424, 0 420 Z";
   const sleevePath = "M 0 178 L 464 178 Q 480 178, 480 194 L 480 426 Q 480 442, 464 442 L 0 442 Z";
+  // Unique IDs per instance so the mobile + desktop wrist SVGs don't collide on `url(#…)` references
+  const uid = useId().replace(/:/g, "");
+  const skinTopId       = `ws-${uid}`;
+  const shadowOverlayId = `wo-${uid}`;
+  const sleeveGradId    = `sg-${uid}`;
+  const armRightFadeId  = `af-${uid}`;
+  const armFadeMaskId   = `am-${uid}`;
   return (
     <svg
       className="absolute pointer-events-none"
@@ -127,39 +134,39 @@ function WristReference({ show, zoom = 1, variant = "skin" }: { show: boolean; z
       aria-hidden="true"
     >
       <defs>
-        <linearGradient id="wristSkinTop" x1="0%" y1="0%" x2="0%" y2="100%">
+        <linearGradient id={skinTopId} x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%"  stopColor="#f7d8b6" />
           <stop offset="35%" stopColor="#ecc197" />
           <stop offset="100%" stopColor="#b9885a" />
         </linearGradient>
-        <linearGradient id="wristShadowOverlay" x1="0%" y1="0%" x2="0%" y2="100%">
+        <linearGradient id={shadowOverlayId} x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%"  stopColor="rgba(255,255,255,0.22)" />
           <stop offset="55%" stopColor="rgba(0,0,0,0)" />
           <stop offset="100%" stopColor="rgba(0,0,0,0.26)" />
         </linearGradient>
-        <linearGradient id="sleeveGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <linearGradient id={sleeveGradId} x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%"   stopColor="#1e1d1c" />
           <stop offset="50%"  stopColor="#2a2926" />
           <stop offset="100%" stopColor="#0f0e0d" />
         </linearGradient>
-        <linearGradient id="armRightFade" x1="0%" y1="0%" x2="100%" y2="0%">
+        <linearGradient id={armRightFadeId} x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%"   stopColor="white" stopOpacity="1" />
           <stop offset="55%"  stopColor="white" stopOpacity="1" />
           <stop offset="78%"  stopColor="black" stopOpacity="0" />
           <stop offset="100%" stopColor="black" stopOpacity="0" />
         </linearGradient>
-        <mask id="armFadeMask">
-          <rect width="1400" height="620" fill="url(#armRightFade)" />
+        <mask id={armFadeMaskId}>
+          <rect width="1400" height="620" fill={`url(#${armRightFadeId})`} />
         </mask>
       </defs>
 
-      <g mask="url(#armFadeMask)" opacity={isLine ? 1 : 0.9}>
+      <g mask={`url(#${armFadeMaskId})`} opacity={isLine ? 1 : 0.9}>
         {isLine ? (
           <path d={armPath} fill="#ffffff" stroke="#1c1c1c" strokeWidth="2" />
         ) : (
           <>
-            <path d={armPath} fill="url(#wristSkinTop)" />
-            <path d={armPath} fill="url(#wristShadowOverlay)" />
+            <path d={armPath} fill={`url(#${skinTopId})`} />
+            <path d={armPath} fill={`url(#${shadowOverlayId})`} />
           </>
         )}
       </g>
@@ -172,7 +179,7 @@ function WristReference({ show, zoom = 1, variant = "skin" }: { show: boolean; z
         </>
       ) : (
         <>
-          <path d={sleevePath} fill="url(#sleeveGrad)" />
+          <path d={sleevePath} fill={`url(#${sleeveGradId})`} />
           <path d="M 478 198 L 478 422" stroke="rgba(255,255,255,0.12)" strokeWidth="2" fill="none" />
         </>
       )}
@@ -377,16 +384,24 @@ function SwatchRow({
             disabled={!isColorBlocked && isDisabled}
             onClick={() => { if (!isDisabled) onSelect(o.id); }}
             className={`flex flex-col items-center justify-center gap-1 h-[100px] px-1 rounded-xl transition ${
-              isColorBlocked ? "opacity-30 cursor-not-allowed grayscale" : isDisabled ? "opacity-30 cursor-not-allowed" : "hover:bg-black/5"
+              isColorBlocked ? "cursor-not-allowed" : isDisabled ? "opacity-30 cursor-not-allowed" : "hover:bg-black/5"
             }`}
           >
             <div
               className={`relative rounded-full size-[50px] shadow-[inset_0px_-2.9px_5.8px_rgba(0,0,0,0.08),inset_0px_2.9px_5.8px_rgba(255,255,255,0.18)] ${
-                sel ? "ring-2 ring-offset-2 ring-[#111]" : "ring-1 ring-black/10"
+                isColorBlocked
+                  ? "ring-[1.5px] ring-[#b8362c]/55 grayscale opacity-55"
+                  : sel ? "ring-2 ring-offset-2 ring-[#111]" : "ring-1 ring-black/10"
               }`}
               style={{ background: o.color }}
             >
               {sel && <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-2 rounded-full bg-white shadow ring-1 ring-black/30" />}
+              {/* Forbidden indicator — diagonal slash inset slightly from the swatch edge */}
+              {isColorBlocked && (
+                <svg className="absolute inset-0 size-full pointer-events-none" viewBox="0 0 50 50" aria-hidden="true">
+                  <line x1="10" y1="10" x2="40" y2="40" stroke="#b8362c" strokeWidth="2.5" strokeLinecap="round" opacity="0.92" />
+                </svg>
+              )}
             </div>
             <span className="uppercase text-[#181612] text-center mt-2" style={{ fontSize: 12, fontWeight: 600 }}>{o.label}</span>
             {/* Always-rendered caption with reserved min-height — keeps swatches aligned regardless of N/A or price */}
@@ -1128,7 +1143,7 @@ export default function App() {
                 }}
               >
                 {/* Wrist reference — positioned absolute, centers on the watch via the relative wrapper */}
-                <WristReference show={showWrist} variant={wristStyle} />
+                <WristReference show={showWrist} variant={wristStyle} zoom={0.9} />
                 {/* Active watch is in flow (drives wrapper's natural height). Inactive ones are
                     absolute at the SAME top:0 position with the same flex centering — so swapping
                     active produces no visible layout shift, only a FLIP scale of the new watch. */}
