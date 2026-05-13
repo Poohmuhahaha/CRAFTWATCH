@@ -369,6 +369,10 @@ function SwatchRow({
   disabled?: boolean; forcedId?: string; disabledIds?: string[]; blockedReason?: string;
 }) {
   const isSelected = (id: string) => Array.isArray(value) ? value.includes(id) : value === id;
+  // If ANY swatch in this row has a caption (a price OR an N/A), reserve caption space on EVERY swatch
+  // so they all align vertically. If no swatch ever has a caption, drop the caption span entirely so
+  // the layout looks identical to the Main Strap (clean centered swatch + label).
+  const rowHasCaption = options.some((o) => o.price && o.price.length > 0) || disabledIds.length > 0;
   return (
     <div className="grid gap-x-2 gap-y-8" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(72px, 1fr))" }}>
       {options.map((o) => {
@@ -383,7 +387,7 @@ function SwatchRow({
             aria-disabled={isColorBlocked || undefined}
             disabled={!isColorBlocked && isDisabled}
             onClick={() => { if (!isDisabled) onSelect(o.id); }}
-            className={`flex flex-col items-center justify-center gap-1 h-[100px] px-1 rounded-xl transition ${
+            className={`flex flex-col items-center justify-center gap-1 ${rowHasCaption ? "h-[116px]" : "h-[100px]"} px-1 rounded-xl transition ${
               isColorBlocked ? "cursor-not-allowed" : isDisabled ? "opacity-30 cursor-not-allowed" : "hover:bg-black/5"
             }`}
           >
@@ -404,13 +408,16 @@ function SwatchRow({
               )}
             </div>
             <span className="uppercase text-[#181612] text-center mt-2" style={{ fontSize: 12, fontWeight: 600 }}>{o.label}</span>
-            {/* Always-rendered caption with reserved min-height — keeps swatches aligned regardless of N/A or price */}
-            <span
-              className={`text-center leading-tight min-h-[12px] ${isColorBlocked ? "text-[#b8362c]" : "text-[#9e9e9e]"}`}
-              style={{ fontSize: 9, fontWeight: isColorBlocked ? 700 : 600 }}
-            >
-              {isColorBlocked ? "N/A" : (o.price ?? "")}
-            </span>
+            {/* Caption — rendered only on rows that need it. When any swatch in the row has a caption,
+                all swatches reserve the space (min-h) so positions stay aligned. */}
+            {rowHasCaption && (
+              <span
+                className={`text-center leading-tight min-h-[12px] ${isColorBlocked ? "text-[#b8362c]" : "text-[#9e9e9e]"}`}
+                style={{ fontSize: 9, fontWeight: isColorBlocked ? 700 : 600 }}
+              >
+                {isColorBlocked ? "N/A" : (o.price ?? "")}
+              </span>
+            )}
           </button>
         );
 
