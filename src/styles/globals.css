@@ -24,3 +24,23 @@ html {
   background: rgba(0, 0, 0, 0.28);
 }
 
+/* Info container (Section back face) — slim, padded scrollbar that doesn't crowd the rounded corner */
+.info-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
+}
+.info-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.info-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 16px 0;
+}
+.info-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.14);
+  border-radius: 999px;
+}
+.info-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.26);
+}
+

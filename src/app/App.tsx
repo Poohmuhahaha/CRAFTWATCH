@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useId } from "react";
-import { Upload, X, RotateCcw, Info, Plus, Minus, Maximize2, Minimize2 } from "lucide-react";
+import { Upload, X, RotateCcw, Info, Plus, Minus, CircleSlash, Maximize2, Minimize2 } from "lucide-react";
 import svgPaths from "../imports/Section-1-1/svg-n6f01f9iwu";
 import confetti from "canvas-confetti";
 import { Tooltip, TooltipTrigger, TooltipContent } from "./components/ui/tooltip";
@@ -101,6 +101,97 @@ const getGMT7 = () => {
   return { h: g.getHours(), m: g.getMinutes(), s: g.getSeconds() };
 };
 
+function WristReference({ show, zoom = 1, variant = "skin" }: { show: boolean; zoom?: number; variant?: "skin" | "line" }) {
+  // Always render so opacity can transition; SVG fades in/out instead of popping
+  const ARM_SCALE = 1.44;
+  const w = 1400 * ARM_SCALE * zoom;
+  const h = 620 * ARM_SCALE * zoom;
+  const isLine = variant === "line";
+  const armPath = "M 0 195 Q 200 188, 400 192 Q 600 196, 800 200 Q 1000 204, 1200 200 Q 1340 196, 1400 192 L 1400 426 Q 1340 422, 1200 422 Q 1000 424, 800 422 Q 600 420, 400 422 Q 200 424, 0 420 Z";
+  const sleevePath = "M 0 178 L 464 178 Q 480 178, 480 194 L 480 426 Q 480 442, 464 442 L 0 442 Z";
+  return (
+    <svg
+      className="absolute pointer-events-none"
+      style={{
+        left: "50%",
+        top: "50%",
+        transform: "translate(-50%, -50%)",
+        zIndex: 0,
+        opacity: show ? 1 : 0,
+        willChange: "opacity",
+        transition: "opacity 0.5s cubic-bezier(0.32, 0.72, 0, 1)",
+      }}
+      width={w}
+      height={h}
+      viewBox="0 0 1400 620"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="wristSkinTop" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%"  stopColor="#f7d8b6" />
+          <stop offset="35%" stopColor="#ecc197" />
+          <stop offset="100%" stopColor="#b9885a" />
+        </linearGradient>
+        <linearGradient id="wristShadowOverlay" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%"  stopColor="rgba(255,255,255,0.22)" />
+          <stop offset="55%" stopColor="rgba(0,0,0,0)" />
+          <stop offset="100%" stopColor="rgba(0,0,0,0.26)" />
+        </linearGradient>
+        <linearGradient id="sleeveGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%"   stopColor="#1e1d1c" />
+          <stop offset="50%"  stopColor="#2a2926" />
+          <stop offset="100%" stopColor="#0f0e0d" />
+        </linearGradient>
+        <linearGradient id="armRightFade" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%"   stopColor="white" stopOpacity="1" />
+          <stop offset="55%"  stopColor="white" stopOpacity="1" />
+          <stop offset="78%"  stopColor="black" stopOpacity="0" />
+          <stop offset="100%" stopColor="black" stopOpacity="0" />
+        </linearGradient>
+        <mask id="armFadeMask">
+          <rect width="1400" height="620" fill="url(#armRightFade)" />
+        </mask>
+      </defs>
+
+      <g mask="url(#armFadeMask)" opacity={isLine ? 1 : 0.9}>
+        {isLine ? (
+          <path d={armPath} fill="#ffffff" stroke="#1c1c1c" strokeWidth="2" />
+        ) : (
+          <>
+            <path d={armPath} fill="url(#wristSkinTop)" />
+            <path d={armPath} fill="url(#wristShadowOverlay)" />
+          </>
+        )}
+      </g>
+
+      {/* ── Sleeve cuff on the LEFT ── */}
+      {isLine ? (
+        <>
+          <path d={sleevePath} fill="#ffffff" stroke="#1c1c1c" strokeWidth="2" />
+          <path d="M 466 200 L 466 420" stroke="#1c1c1c" strokeWidth="1.2" fill="none" />
+        </>
+      ) : (
+        <>
+          <path d={sleevePath} fill="url(#sleeveGrad)" />
+          <path d="M 478 198 L 478 422" stroke="rgba(255,255,255,0.12)" strokeWidth="2" fill="none" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+function ExtrasPillRow({
+  extras,
+  className = "",
+}: {
+  extras: string[];
+  className?: string;
+}) {
+  return (
+    <></>
+  );
+}
+
 function TimeDisplay({ className = "", style }: { className?: string; style?: React.CSSProperties }) {
   const [time, setTime] = useState(getGMT7);
   useEffect(() => {
@@ -136,12 +227,30 @@ function Navbar() {
 
 // ── SECTION ────────────────────────────────────────────────────────────────
 
-function Section({ title, hint, children, info }: {
+function Section({ title, hint, children, info, collapsible = false, defaultOpen = false }: {
   title: string; hint?: string; children: React.ReactNode; info?: React.ReactNode;
+  collapsible?: boolean; defaultOpen?: boolean;
 }) {
   const [flipped, setFlipped] = useState(false);
+  const [open, setOpen] = useState(!collapsible || defaultOpen);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const handleToggle = () => {
+    const wasOpen = open;
+    setOpen(!wasOpen);
+    if (!wasOpen) {
+      // After expanding, scroll the section to just below the sticky header(s) so the new content is visible
+      requestAnimationFrame(() => {
+        const el = rootRef.current;
+        if (!el) return;
+        const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
+        const stickyOffset = isDesktop ? 80 : 320;
+        const targetY = window.scrollY + el.getBoundingClientRect().top - stickyOffset;
+        window.scrollTo({ top: targetY, behavior: "smooth" });
+      });
+    }
+  };
   return (
-    <div style={{ perspective: "1200px" }}>
+    <div ref={rootRef} style={{ perspective: "1200px" }}>
       <div
         className="relative transition-transform duration-500"
         style={{ transformStyle: "preserve-3d", transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)" }}
@@ -151,29 +260,42 @@ function Section({ title, hint, children, info }: {
           className="bg-white/80 border border-[rgba(222,217,209,0.9)] rounded-[24px] w-full"
           style={{ boxShadow: "0px 8px 12px rgba(0,0,0,0.04)", backfaceVisibility: "hidden" }}
         >
-          <div className="px-6 pt-5 pb-1 flex items-center justify-between gap-2">
+          <div className={`px-6 ${collapsible && !open ? "py-4" : "pt-5 pb-1"} flex items-center justify-between gap-2`}>
             <div className="flex items-baseline gap-3 min-w-0">
               <span className="text-[#141414] tracking-[-0.8px]" style={{ fontSize: 20, fontWeight: 700 }}>{title}</span>
               {hint && <span className="text-[#9e9e9e]" style={{ fontSize: 13, fontWeight: 600 }}>{hint}</span>}
             </div>
-            {info && (
-              <button
-                type="button"
-                onClick={() => setFlipped(true)}
-                className="size-7 rounded-full border border-[#ddd5c8] text-[#b8ad9e] hover:text-[#141414] hover:border-[#888] transition-all flex items-center justify-center flex-shrink-0"
-                aria-label={`About ${title}`}
-              >
-                <Info className="size-3.5" />
-              </button>
-            )}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {info && (
+                <button
+                  type="button"
+                  onClick={() => setFlipped(true)}
+                  className="size-7 rounded-full border border-[#ddd5c8] text-[#b8ad9e] hover:text-[#141414] hover:border-[#888] transition-all flex items-center justify-center"
+                  aria-label={`About ${title}`}
+                >
+                  <Info className="size-3.5" />
+                </button>
+              )}
+              {collapsible && (
+                <button
+                  type="button"
+                  onClick={handleToggle}
+                  aria-expanded={open}
+                  aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
+                  className="size-7 rounded-full border border-[#ddd5c8] text-[#b8ad9e] hover:text-[#141414] hover:border-[#888] transition-all flex items-center justify-center"
+                >
+                  {open ? <Minus className="size-3.5" strokeWidth={2.5} /> : <Plus className="size-3.5" strokeWidth={2.5} />}
+                </button>
+              )}
+            </div>
           </div>
-          <div className="px-6 pb-6 pt-3">{children}</div>
+          {(!collapsible || open) && <div className="px-6 pb-6 pt-3">{children}</div>}
         </div>
 
         {/* Back face */}
         {info && (
           <div
-            className="absolute inset-0 bg-[#faf9f6] border border-[rgba(222,217,209,0.9)] rounded-[24px] overflow-auto"
+            className="info-scroll absolute inset-0 bg-[#faf9f6] border border-[rgba(222,217,209,0.9)] rounded-[24px] overflow-auto"
             style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)", boxShadow: "0px 8px 12px rgba(0,0,0,0.04)" }}
           >
             <div className="px-6 pt-5 pb-2 flex items-center justify-between gap-2">
@@ -216,7 +338,7 @@ function PillRow({ options, value, onChange }: { options: Pill[]; value: string;
             {o.isNew && (
               <span
                 className={`absolute -top-1.5 -right-1.5 px-1.5 py-0.5 rounded-full text-[8px] font-bold tracking-wider ${
-                  active ? "bg-white text-[#111]" : "bg-[#b7121f] text-white"
+                  active ? "bg-[#b7121f] text-white" : "bg-[#b7121f] text-white"
                 }`}
               >
                 NEW
@@ -241,7 +363,7 @@ function SwatchRow({
 }) {
   const isSelected = (id: string) => Array.isArray(value) ? value.includes(id) : value === id;
   return (
-    <div className="grid gap-x-2 gap-y-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(72px, 1fr))" }}>
+    <div className="grid gap-x-2 gap-y-8" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(72px, 1fr))" }}>
       {options.map((o) => {
         const sel = isSelected(o.id);
         const isForced = forcedId === o.id;
@@ -266,9 +388,14 @@ function SwatchRow({
             >
               {sel && <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-2 rounded-full bg-white shadow ring-1 ring-black/30" />}
             </div>
-            <span className="uppercase text-[#181612] text-center" style={{ fontSize: 12, fontWeight: 600 }}>{o.label}</span>
-            {isColorBlocked && <span className="text-[#b8362c] text-center leading-tight" style={{ fontSize: 9, fontWeight: 700 }}>N/A</span>}
-            {!isColorBlocked && o.price && <span className="text-[#9e9e9e] text-center" style={{ fontSize: 9, fontWeight: 600 }}>{o.price}</span>}
+            <span className="uppercase text-[#181612] text-center mt-2" style={{ fontSize: 12, fontWeight: 600 }}>{o.label}</span>
+            {/* Always-rendered caption with reserved min-height — keeps swatches aligned regardless of N/A or price */}
+            <span
+              className={`text-center leading-tight min-h-[12px] ${isColorBlocked ? "text-[#b8362c]" : "text-[#9e9e9e]"}`}
+              style={{ fontSize: 9, fontWeight: isColorBlocked ? 700 : 600 }}
+            >
+              {isColorBlocked ? "N/A" : (o.price ?? "")}
+            </span>
           </button>
         );
 
@@ -288,18 +415,21 @@ function SwatchRow({
 
 // ── STRAP ──────────────────────────────────────────────────────────────────
 
-function Strap({ width, height, color, material = "rubber", position }: {
-  width: number; height: number; color: string; material?: string; position: "top" | "bottom";
+function Strap({ width, height, color, material = "rubber", position, flatTip = false }: {
+  width: number; height: number; color: string; material?: string; position: "top" | "bottom"; flatTip?: boolean;
 }) {
-  const tipRadius = width / 2;
   const innerRadius = 10;
+  // When flatTip is on (e.g. compactStrap for the wrist comparison view), the outer
+  // end of the strap is a square cut instead of a half-circle — looks like the strap
+  // is folded straight down behind the wrist, not curling out into the air.
+  const tipRadius = flatTip ? innerRadius : width / 2;
   const radius = position === "top"
     ? `${tipRadius}px ${tipRadius}px ${innerRadius}px ${innerRadius}px`
     : `${innerRadius}px ${innerRadius}px ${tipRadius}px ${tipRadius}px`;
 
   if (material === "rubber") {
     return (
-      <div className="relative overflow-hidden" style={{ width, height, borderRadius: radius, background: color, boxShadow: "inset 0 -3px 7px rgba(0,0,0,0.30), inset 4px 0 9px rgba(0,0,0,0.22), inset -4px 0 9px rgba(0,0,0,0.22), 0 10px 22px rgba(0,0,0,0.32)" }}>
+      <div className="relative overflow-hidden" style={{ width, height, borderRadius: radius, background: color, willChange: "height", transition: "height 0.5s cubic-bezier(0.32, 0.72, 0, 1), border-radius 0.5s cubic-bezier(0.32, 0.72, 0, 1)", boxShadow: "inset 0 -3px 7px rgba(0,0,0,0.30), inset 4px 0 9px rgba(0,0,0,0.22), inset -4px 0 9px rgba(0,0,0,0.22), 0 10px 22px rgba(0,0,0,0.32)" }}>
         <div className="absolute inset-0 pointer-events-none" style={{ borderRadius: "inherit", background: "linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 22%, rgba(0,0,0,0) 72%, rgba(0,0,0,0.18) 100%)" }} />
       </div>
     );
@@ -307,7 +437,7 @@ function Strap({ width, height, color, material = "rubber", position }: {
   if (material === "leather") {
     const grain = "repeating-linear-gradient(47deg, rgba(0,0,0,0.14) 0px, rgba(0,0,0,0.14) 1px, transparent 1px, transparent 6px), repeating-linear-gradient(-47deg, rgba(0,0,0,0.10) 0px, rgba(0,0,0,0.10) 1px, transparent 1px, transparent 6px)";
     return (
-      <div className="relative overflow-hidden" style={{ width, height, borderRadius: radius, background: `${grain}, ${color}`, boxShadow: "inset -3px -4px 3px rgba(0,0,0,0.38), inset 3px 3px 2px rgba(255,255,255,0.22), 0 10px 22px rgba(0,0,0,0.32)" }}>
+      <div className="relative overflow-hidden" style={{ width, height, borderRadius: radius, background: `${grain}, ${color}`, willChange: "height", transition: "height 0.5s cubic-bezier(0.32, 0.72, 0, 1), border-radius 0.5s cubic-bezier(0.32, 0.72, 0, 1)", boxShadow: "inset -3px -4px 3px rgba(0,0,0,0.38), inset 3px 3px 2px rgba(255,255,255,0.22), 0 10px 22px rgba(0,0,0,0.32)" }}>
         <div aria-hidden="true" className="absolute pointer-events-none" style={{ inset: 5, borderRadius: "inherit", border: "1.5px dashed rgba(210,185,150,0.72)", boxShadow: "0 0 5px rgba(0,0,0,0.55)" }} />
         <div className="absolute inset-0 pointer-events-none" style={{ borderRadius: "inherit", background: "linear-gradient(180deg, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0) 32%, rgba(0,0,0,0) 62%, rgba(0,0,0,0.28) 100%)" }} />
       </div>
@@ -316,7 +446,7 @@ function Strap({ width, height, color, material = "rubber", position }: {
   const ribSpacing = 8;
   const ribCount = Math.ceil(height / ribSpacing) + 1;
   return (
-    <div className="relative overflow-hidden" style={{ width, height, borderRadius: radius, background: color, boxShadow: "inset 2px 2px 4px rgba(255,255,255,0.18), inset -3px -4px 6px rgba(0,0,0,0.45), 0 10px 22px rgba(0,0,0,0.32)" }}>
+    <div className="relative overflow-hidden" style={{ width, height, borderRadius: radius, background: color, willChange: "height", transition: "height 0.5s cubic-bezier(0.32, 0.72, 0, 1), border-radius 0.5s cubic-bezier(0.32, 0.72, 0, 1)", boxShadow: "inset 2px 2px 4px rgba(255,255,255,0.18), inset -3px -4px 6px rgba(0,0,0,0.45), 0 10px 22px rgba(0,0,0,0.32)" }}>
       <svg className="absolute inset-0 pointer-events-none" width={width} height={height} style={{ display: "block" }}>
         {Array.from({ length: ribCount }, (_, i) => (
           <line key={i} x1={0} x2={width} y1={i * ribSpacing + 0.5} y2={i * ribSpacing + 0.5} stroke="rgba(170,170,170,0.55)" strokeWidth={1} />
@@ -331,10 +461,16 @@ function Strap({ width, height, color, material = "rubber", position }: {
 
 function WatchPreview({
   caseColor, caseSize, dialColor, dialImage, handsColor, secondsColor, markerColor, markerType, strapColor, strapMaterial, scale = 1,
+  dialImageScale = 100, dialImageRotation = 0, dialImageOffsetX = 0, dialImageOffsetY = 0,
+  onDialImageDrag, compactStrap = false,
 }: {
   caseColor: string; caseSize: string; dialColor: string; dialImage: string | null;
   handsColor: string; secondsColor: string; markerColor: string; markerType: string;
   strapColor: string; strapMaterial: string; scale?: number;
+  dialImageScale?: number; dialImageRotation?: number;
+  dialImageOffsetX?: number; dialImageOffsetY?: number;
+  onDialImageDrag?: (offsetX: number, offsetY: number) => void;
+  compactStrap?: boolean;
 }) {
   const [time, setTime] = useState(getGMT7);
   useEffect(() => {
@@ -354,8 +490,20 @@ function WatchPreview({
   const cs       = Math.round((CASE_SIZE_PX[caseSize] ?? 224) * scale);
   const dialPad  = Math.round(cs * 0.05);
   const strapW   = Math.round(cs * 0.393);
-  const strapTopH = Math.round(cs * 1.00);
-  const strapBotH = Math.round(cs * 1.36);
+  // Strap lengths shrink as the case grows so the watch's TOTAL EXTENT (top of top strap
+  // to bottom of bottom strap) stays constant across all case sizes.
+  //   • Normal mode: total anchored to the largest case (64mm) — original 1.10/1.40 ratio.
+  //   • Compact mode (Compare Size): total anchored to the SMALLEST case (40mm) with the
+  //     compact 0.22 ratio, so straps appear tucked behind the wrist consistently. Bigger
+  //     cases get progressively shorter straps to keep the top/bottom extents identical.
+  const maxCs = (CASE_SIZE_PX["64"] ?? 220) * scale;
+  const minCs = (CASE_SIZE_PX["40"] ?? 180) * scale;
+  const TARGET_TOTAL   = maxCs * 4.34;  // total extent (straps + case) constant across sizes — tuned so each strap ≈ 500px at 64mm/1.32 scale
+  const TARGET_COMPACT = minCs * 1.34;  // compact total for wrist-compare mode
+  const strapsTotal    = Math.max(0, TARGET_TOTAL - cs * 0.9);
+  const compactStrapH  = Math.max(0, (TARGET_COMPACT - cs * 0.9) / 2);
+  const strapTopH = compactStrap ? Math.round(compactStrapH) : Math.round(strapsTotal / 2);
+  const strapBotH = compactStrap ? Math.round(compactStrapH) : Math.round(strapsTotal / 2);
   const lugW      = Math.round(cs * 0.045);
   const lugH      = Math.round(cs * 0.115);
   const lugProtrude = Math.round(cs * 0.05);
@@ -371,7 +519,7 @@ function WatchPreview({
   return (
     <div className="relative flex flex-col items-center" style={{ width: cs + 50 }}>
       <div style={{ marginBottom: -lugProtrude, position: "relative", zIndex: 0 }}>
-        <Strap width={strapW} height={strapTopH} color={strapColor} material={strapMaterial} position="top" />
+        <Strap width={strapW} height={strapTopH} color={strapColor} material={strapMaterial} position="top" flatTip={compactStrap} />
       </div>
       <div className="relative" style={{ width: cs, height: cs, zIndex: 1 }}>
         <div style={{ ...lugBase, left: lugInsetX, top: -lugProtrude, borderRadius: "4px 4px 2px 2px", boxShadow: "inset 2px 0 3px rgba(255,255,255,0.18), inset -1px 0 2px rgba(0,0,0,0.45), 0 -4px 10px rgba(0,0,0,0.28)", zIndex: 0 }} />
@@ -388,7 +536,46 @@ function WatchPreview({
           <div className="absolute inset-0 pointer-events-none" style={{ borderRadius: "inherit", background: "linear-gradient(145deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 35%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.35) 100%)" }} />
           <div className="absolute" style={{ right: -Math.round(cs * 0.035), top: "47%", width: Math.round(cs * 0.045), height: Math.round(cs * 0.085), background: `repeating-linear-gradient(180deg, rgba(0,0,0,0.35) 0 1px, transparent 1px 3px), ${caseColor}`, borderRadius: 3, boxShadow: "inset 0 1px 1px rgba(255,255,255,0.4), inset 0 -1px 1px rgba(0,0,0,0.5), 1px 2px 3px rgba(0,0,0,0.5)" }} />
           <div className="relative size-full rounded-full overflow-hidden flex items-center justify-center" style={{ background: dialImage ? "#000" : dialColor, boxShadow: "inset 0 6px 14px rgba(0,0,0,0.75), inset 0 -3px 8px rgba(255,255,255,0.06), inset 0 0 0 2px rgba(0,0,0,0.4)" }}>
-            {dialImage && <img src={dialImage} alt="dial" className="absolute inset-0 size-full object-cover" />}
+            {dialImage && (() => {
+              const dragRef = { x: 0, y: 0, ox: dialImageOffsetX, oy: dialImageOffsetY, active: false };
+              const onPointerDown = (e: React.PointerEvent<HTMLImageElement>) => {
+                if (!onDialImageDrag) return;
+                (e.currentTarget as HTMLImageElement).setPointerCapture(e.pointerId);
+                dragRef.x = e.clientX; dragRef.y = e.clientY;
+                dragRef.ox = dialImageOffsetX; dragRef.oy = dialImageOffsetY;
+                dragRef.active = true;
+              };
+              const onPointerMove = (e: React.PointerEvent<HTMLImageElement>) => {
+                if (!dragRef.active || !onDialImageDrag) return;
+                const dialPx = (e.currentTarget as HTMLImageElement).clientWidth || 1;
+                const dxPct = ((e.clientX - dragRef.x) / dialPx) * 100;
+                const dyPct = ((e.clientY - dragRef.y) / dialPx) * 100;
+                const clamp = (v: number) => Math.max(-60, Math.min(60, v));
+                onDialImageDrag(clamp(dragRef.ox + dxPct), clamp(dragRef.oy + dyPct));
+              };
+              const onPointerUp = (e: React.PointerEvent<HTMLImageElement>) => {
+                dragRef.active = false;
+                try { (e.currentTarget as HTMLImageElement).releasePointerCapture(e.pointerId); } catch {}
+              };
+              return (
+                <img
+                  src={dialImage}
+                  alt="dial"
+                  draggable={false}
+                  onPointerDown={onPointerDown}
+                  onPointerMove={onPointerMove}
+                  onPointerUp={onPointerUp}
+                  onPointerCancel={onPointerUp}
+                  className="absolute inset-0 size-full object-cover select-none"
+                  style={{
+                    cursor: onDialImageDrag ? "grab" : undefined,
+                    transform: `translate(${dialImageOffsetX}%, ${dialImageOffsetY}%) scale(${dialImageScale / 100}) rotate(${dialImageRotation}deg)`,
+                    transformOrigin: "center center",
+                    touchAction: "none",
+                  }}
+                />
+              );
+            })()}
             <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 30% 18%, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 35%), linear-gradient(160deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 40%)" }} />
             {!dialImage && markerType !== "empty" && (
               <svg className="absolute inset-0 size-full" viewBox="0 0 100 100">
@@ -424,7 +611,7 @@ function WatchPreview({
         </div>
       </div>
       <div style={{ marginTop: -lugProtrude, position: "relative", zIndex: 0 }}>
-        <Strap width={strapW} height={strapBotH} color={strapColor} material={strapMaterial} position="bottom" />
+        <Strap width={strapW} height={strapBotH} color={strapColor} material={strapMaterial} position="bottom" flatTip={compactStrap} />
       </div>
     </div>
   );
@@ -535,6 +722,16 @@ export default function App() {
   const [dialColor,     setDialColor]     = useState("cream");
   const [dialImage,     setDialImage]     = useState<string | null>(null);
   const [dialImageName, setDialImageName] = useState<string>("");
+  const [dialImageScale,    setDialImageScale]    = useState<number>(100);
+  const [dialImageRotation, setDialImageRotation] = useState<number>(0);
+  const [dialImageOffsetX,  setDialImageOffsetX]  = useState<number>(0);
+  const [dialImageOffsetY,  setDialImageOffsetY]  = useState<number>(0);
+  const resetDialImageTransform = () => {
+    setDialImageScale(100);
+    setDialImageRotation(0);
+    setDialImageOffsetX(0);
+    setDialImageOffsetY(0);
+  };
   const [markerType,    setMarkerType]    = useState("dots");
   const [markerColor,   setMarkerColor]   = useState("black");
   const [handsColor,    setHandsColor]    = useState("silver");
@@ -543,21 +740,37 @@ export default function App() {
   const [extraStraps,   setExtraStraps]   = useState<string[]>([]);
   const [showReview,    setShowReview]    = useState(false);
   const [showSuccess,   setShowSuccess]   = useState(false);
-  const [showZoom,      setShowZoom]      = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showWrist,     setShowWrist]     = useState(false);
+  const [wristStyle,    setWristStyle]    = useState<"skin" | "line">("skin");
+  const [showZoom,      setShowZoom]      = useState(false);
+  const [hideBuyNow,    setHideBuyNow]    = useState(false);
   const [strapTab,      setStrapTab]      = useState("rubber");
 
   const fileRef            = useRef<HTMLInputElement>(null);
   const dialImageRef       = useRef<string | null>(null);
+  const buyNowSentinelRef  = useRef<HTMLDivElement>(null);
   useEffect(() => { return () => { if (dialImageRef.current) URL.revokeObjectURL(dialImageRef.current); }; }, []);
 
-  // Lock body scroll while the mobile preview is expanded so the page beneath doesn't peek/scroll
+  // Lock body scroll while mobile preview is in zoom (fullscreen) mode
   useEffect(() => {
     if (!showZoom) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = prev; };
   }, [showZoom]);
+
+  // Fade the in-preview BUY NOW button when the page-bottom Review & Order area scrolls into view
+  useEffect(() => {
+    const el = buyNowSentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => setHideBuyNow(entries[0]?.isIntersecting ?? false),
+      { rootMargin: "0px" }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   const watchRefs1       = useRef<Map<string, HTMLDivElement>>(new Map());
   const watchRefs2       = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -580,11 +793,11 @@ export default function App() {
       currEl.style.transition = "none";
       currEl.style.transform = `scale(${s})`;
       void currEl.offsetHeight;
-      currEl.style.transition = "transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94)";
+      currEl.style.transition = "transform 0.5s cubic-bezier(0.32, 0.72, 0, 1)";
       currEl.style.transform = "scale(1)";
     };
-    flip(watchRefs1, "50% 0%");
-    flip(watchRefs2, "50% 0%");
+    flip(watchRefs1, "50% 50%");
+    flip(watchRefs2, "50% 50%");
   }, [caseSize]);
 
   const imageUploaded = !!dialImage;
@@ -615,6 +828,7 @@ export default function App() {
     if (dialImageRef.current) { URL.revokeObjectURL(dialImageRef.current); dialImageRef.current = null; }
     setDialImage(null);
     setDialImageName("");
+    resetDialImageTransform();
   };
 
   const handleReset = () => {
@@ -622,6 +836,7 @@ export default function App() {
     setCaseSize("40"); setCaseColor("black"); setDialTab("color"); setDialColor("cream");
     setDialImage(null); setDialImageName(""); setMarkerType("dots"); setMarkerColor("black");
     setHandsColor("silver"); setSecondsColor("red"); setPrimaryStrap("rubber-black"); setExtraStraps([]); setStrapTab("rubber");
+    resetDialImageTransform();
   };
 
   const handleDialColorChange = (newColor: string) => {
@@ -765,42 +980,45 @@ export default function App() {
     <>
       <Navbar />
 
-      {/* MOBILE: sticky header + watch preview */}
-      <div className="lg:hidden sticky top-0 z-20" style={{ background: "#f2eee8" }}>
-        {/* Frosted header bar */}
-        <div style={{ background: "rgba(247,243,237,0.82)", backdropFilter: "blur(9px)", borderBottom: "1px solid rgba(226,221,212,0.7)", padding: "14px 16px 10px 16px" }}>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="uppercase text-[#74706a] tracking-[1.4px]" style={{ fontSize: 9, fontWeight: 700 }}>Configure every detail</div>
-              <div className="text-[#111111] leading-[24px]" style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-1.2px" }}>Build Your Watch  </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {!isDefault && (
-                <button
-                  type="button"
-                  onClick={() => setShowResetConfirm(true)}
-                  className="size-9 rounded-full border border-[#ddd5c8] text-[#b8ad9e] hover:text-[#141414] hover:border-[#555] hover:rotate-[-200deg] transition-all duration-500 flex items-center justify-center"
-                  aria-label="Reset all"
-                >
-                  <RotateCcw className="size-4" />
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setShowZoom((z) => !z)}
-                className="size-9 rounded-full border border-[#ddd5c8] text-[#b8ad9e] hover:text-[#141414] hover:border-[#555] transition-all flex items-center justify-center"
-                aria-label={showZoom ? "Collapse preview" : "Zoom preview"}
-              >
-                {showZoom ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
-              </button>
-            </div>
+      {/* MOBILE: heading + Reset + Zoom — sits above the sticky preview so it scrolls away naturally */}
+      <div className="lg:hidden px-4 pt-4 pb-3" style={{ background: "#f2eee8" }}>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-[#141414] tracking-[-1.2px]" style={{ fontSize: 24, fontWeight: 800 }}>
+            Build Your Watch
+          </h1>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowResetConfirm(true)}
+              aria-hidden={isDefault}
+              tabIndex={isDefault ? -1 : 0}
+              className={`group flex items-center gap-1.5 h-9 px-3.5 rounded-full border border-[#ddd5c8] text-[#666] hover:text-[#141414] hover:border-[#555] hover:bg-black/5 active:bg-black/5 transition-all flex-shrink-0 ${isDefault ? "opacity-0 pointer-events-none" : ""}`}
+              aria-label="Reset all customizations"
+            >
+              <RotateCcw className="size-3.5 transition-transform duration-500 group-hover:rotate-[-200deg]" />
+              <span style={{ fontSize: 13, fontWeight: 700 }}>Reset</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!showZoom) window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+                setShowZoom((v) => !v);
+              }}
+              aria-label={showZoom ? "Collapse preview" : "Zoom preview"}
+              className="size-9 rounded-full border border-[#ddd5c8] text-[#666] hover:text-[#141414] hover:border-[#555] hover:bg-black/5 active:bg-black/5 transition-all flex items-center justify-center flex-shrink-0"
+            >
+              {showZoom ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+            </button>
           </div>
         </div>
-        {/* Watch preview section — expands in-place when Zoom is clicked */}
+      </div>
+
+      {/* MOBILE: sticky watch preview */}
+      <div className="lg:hidden sticky top-0 z-20" style={{ background: "#f2eee8" }}>
         <div
           style={{
             position: "relative",
-            height: showZoom ? "calc(100vh - 76px)" : 300,
+            height: showZoom ? "calc(100vh - 80px)" : 300,
             overflow: "hidden",
             borderRadius: showZoom ? "0px" : "0 0 32px 32px",
             borderLeft: "2px solid rgba(255,255,255,0.88)",
@@ -811,60 +1029,81 @@ export default function App() {
             transition: "height 0.6s cubic-bezier(0.32, 0.72, 0, 1), border-radius 0.6s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.6s cubic-bezier(0.32, 0.72, 0, 1)",
           }}
         >
-          {/* Watch cluster — anchored higher when normal, centered when zoomed */}
-          <div
-            style={{
-              position: "absolute",
-              left: "50%",
-              top: showZoom ? "50%" : "-80px",
-              transform: showZoom ? "translate3d(-50%, -50%, 0)" : "translate3d(-50%, 0, 0)",
-              willChange: "top, transform",
-              transition: "top 0.6s cubic-bezier(0.32, 0.72, 0, 1), transform 0.6s cubic-bezier(0.32, 0.72, 0, 1)",
-            }}
-          >
-            {CASE_SIZES.map((size) => (
+          {/* Wrist reference — scaled down on mobile (clipped by preview's overflow:hidden) */}
+          <WristReference show={showWrist} variant={wristStyle} zoom={0.4} />
+
+          {/* Watch cluster — all watches share the same absolute-centered position (mirrors desktop FLIP setup) */}
+          {CASE_SIZES.map((size) => {
+            const isActive = caseSize === size.id;
+            return (
               <div
                 key={size.id}
-                ref={(el) => { if (el) watchRefs2.current.set(size.id, el); else watchRefs2.current.delete(size.id); }}
-                style={caseSize !== size.id ? { position: "absolute", visibility: "hidden", pointerEvents: "none" } : {}}
+                className="flex justify-center"
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  zIndex: 1,
+                  visibility: isActive ? "visible" : "hidden",
+                  pointerEvents: isActive ? "auto" : "none",
+                }}
               >
-                <WatchPreview
-                  caseColor={caseColorHex} caseSize={size.id} dialColor={dialColorHex}
-                  dialImage={dialImage} handsColor={handsColorHex} secondsColor={secondsColorHex}
-                  markerColor={markerColorHex} markerType={markerType} strapColor={strapColorHex}
-                  strapMaterial={strapMaterial} scale={0.75}
-                />
+                <div ref={(el) => { if (el) watchRefs2.current.set(size.id, el); else watchRefs2.current.delete(size.id); }}>
+                  <WatchPreview
+                    caseColor={caseColorHex} caseSize={size.id} dialColor={dialColorHex}
+                    dialImage={dialImage} handsColor={handsColorHex} secondsColor={secondsColorHex}
+                    markerColor={markerColorHex} markerType={markerType} strapColor={strapColorHex}
+                    strapMaterial={strapMaterial} scale={0.75}
+                    compactStrap={showWrist}
+                    dialImageScale={dialImageScale} dialImageRotation={dialImageRotation}
+                    dialImageOffsetX={dialImageOffsetX} dialImageOffsetY={dialImageOffsetY}
+                    onDialImageDrag={(x, y) => { setDialImageOffsetX(x); setDialImageOffsetY(y); }}
+                  />
+                </div>
               </div>
-            ))}
-          </div>
-          {/* Price — bottom left */}
-          <div style={{ position: "absolute", left: 18, bottom: 52 }}>
+            );
+          })}
+
+          {/* Row 1 — Price (top-left) + GMT (top-right) */}
+          <div style={{ position: "absolute", left: 18, top: 16, zIndex: 30 }}>
             <div className="uppercase text-[#737373] tracking-[1.4px]" style={{ fontSize: 10, fontWeight: 700 }}>Price</div>
             <div className="flex items-baseline gap-1 mt-0.5">
-              <span className="text-[#000000]" style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.5px" }}>${totalPrice}</span>
+              <span className="text-[#111111]" style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.5px" }}>${totalPrice}</span>
               <span className="text-[#737373]" style={{ fontSize: 10, fontWeight: 700 }}>USD</span>
             </div>
           </div>
-          {/* BUY NOW button */}
+          <TimeDisplay style={{ position: "absolute", right: 16, top: 16, zIndex: 30 }} />
+
+          {/* Row 2 — BUY NOW (bottom-left) + Compare Size (bottom-right) */}
           <button
             type="button"
             onClick={() => setShowReview(true)}
             className="flex items-center"
-            style={{ position: "absolute", left: 18, bottom: 16, background: "#111111", color: "#ffffff", borderRadius: 999, height: 30, padding: "0 18px", fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", border: "none", cursor: "pointer" }}
+            style={{
+              position: "absolute", left: 18, bottom: 16, zIndex: 30,
+              background: "#111111", color: "#ffffff", borderRadius: 999, height: 30, padding: "0 18px",
+              fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", border: "none", cursor: "pointer",
+              opacity: hideBuyNow ? 0 : 1,
+              pointerEvents: hideBuyNow ? "none" : "auto",
+              transition: "opacity 0.3s ease",
+            }}
           >
             BUY NOW
           </button>
-          {/* GMT+7 — bottom right, fixed regardless of watch size */}
-          <TimeDisplay style={{ position: "absolute", right: 16, bottom: 16 }} />
-        </div>
-      </div>
-
-      {/* Fixed price badge — desktop only, independent of watch wrapper */}
-      <div className="hidden lg:block fixed z-30 px-4 pt-2.5 pl-60" style={{ bottom: 40, left: 32 }}>
-        <p className="text-[#9e9e9e] uppercase tracking-widest" style={{ fontSize: 9, fontWeight: 700 }}>Price</p>
-        <div className="flex items-baseline gap-1 mt-0.5">
-          <span className="text-[#141414] tracking-tighter" style={{ fontSize: 50, fontWeight: 800 }}>${totalPrice}</span>
-          <span className="text-[#737373]" style={{ fontSize: 11, fontWeight: 600 }}>USD</span>
+          <button
+            type="button"
+            onClick={() => setShowWrist((v) => !v)}
+            aria-pressed={showWrist}
+            className={`absolute bottom-4 right-3 flex items-center justify-center h-[30px] px-3 rounded-full border transition-all ${
+              showWrist
+                ? "bg-[#111] text-white border-[#111]"
+                : "bg-white/80 backdrop-blur-sm text-[#666] border-[#ddd5c8] hover:text-[#141414]"
+            }`}
+            style={{ fontSize: 12, fontWeight: 700, zIndex: 30 }}
+          >
+            Compare size
+          </button>
         </div>
       </div>
 
@@ -872,70 +1111,145 @@ export default function App() {
       <div className="w-full" style={{ background: "#F2EEE8" }}>
         <div className="mx-auto w-full max-w-[1280px] px-6 lg:px-8 flex flex-col lg:flex-row gap-0 lg:gap-8">
 
-          {/* ── LEFT: sticky watch panel ── */}
+          {/* ── LEFT: sticky watch panel — watch + time only; heading moved above category sections ── */}
           <div
-            className="hidden lg:flex lg:w-[46%] flex-shrink-0 flex-col items-center gap-8 py-10 pt-16"
+            className="hidden lg:flex lg:w-[46%] flex-shrink-0 flex-col items-center justify-center py-10 pt-16"
             style={{ position: "sticky", top: 64, height: "calc(100vh - 64px)", alignSelf: "flex-start" }}
           >
-            {/* Heading + Reset button */}
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-3">
-                {/* Counterbalance spacer so h1 stays optically centered with the <p> below */}
-                <div className="size-8 flex-shrink-0" aria-hidden="true" />
-                <h1 className="text-[#141414] tracking-[-1.5px]" style={{ fontSize: 28, fontWeight: 800 }}>Build Your Watch</h1>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => setShowResetConfirm(true)}
-                      aria-hidden={isDefault}
-                      tabIndex={isDefault ? -1 : 0}
-                      className={`size-8 rounded-full border border-[#ddd5c8] text-[#b8ad9e] hover:text-[#141414] hover:border-[#555] hover:rotate-[-200deg] transition-all duration-500 flex items-center justify-center flex-shrink-0 ${isDefault ? "opacity-0 pointer-events-none" : ""}`}
-                      aria-label="Reset all"
-                    >
-                      <RotateCcw className="size-3.5" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">Reset all</TooltipContent>
-                </Tooltip>
-              </div>
-              <p className="text-[#9e9e9e] mt-0.5" style={{ fontSize: 11 }}>Configure every detail, preview in real time.</p>
-            </div>
-
-            <div className="flex flex-col items-center gap-3">
+            <div className="flex flex-col items-center gap-3 w-full">
+              {/* Outer wrapper breaks out of LEFT panel — wider than panel so wrist can extend without being cropped */}
               <div
-                className="relative flex justify-center items-start overflow-visible"
-                style={{ height: 720 }}
+                className="relative"
+                style={{
+                  width: "calc(100% + 200px)",
+                  marginLeft: "-100px",
+                  marginRight: "-100px",
+                  overflow: "visible",
+                }}
               >
-                {CASE_SIZES.map((size) => (
-                  <div
-                    key={size.id}
-                    ref={(el) => { if (el) watchRefs1.current.set(size.id, el); else watchRefs1.current.delete(size.id); }}
-                    style={caseSize !== size.id ? { position: "absolute", visibility: "hidden", pointerEvents: "none" } : {}}
-                  >
-                    <WatchPreview
-                      caseColor={caseColorHex}
-                      caseSize={size.id}
-                      dialColor={dialColorHex}
-                      dialImage={dialImage}
-                      handsColor={handsColorHex}
-                      secondsColor={secondsColorHex}
-                      markerColor={markerColorHex}
-                      markerType={markerType}
-                      strapColor={strapColorHex}
-                      strapMaterial={strapMaterial}
-                      scale={1.00}
-                    />
-                  </div>
-                ))}
+                {/* Wrist reference — positioned absolute, centers on the watch via the relative wrapper */}
+                <WristReference show={showWrist} variant={wristStyle} />
+                {/* Active watch is in flow (drives wrapper's natural height). Inactive ones are
+                    absolute at the SAME top:0 position with the same flex centering — so swapping
+                    active produces no visible layout shift, only a FLIP scale of the new watch. */}
+                {CASE_SIZES.map((size) => {
+                  const isActive = caseSize === size.id;
+                  return (
+                    <div
+                      key={size.id}
+                      className="flex justify-center"
+                      style={isActive
+                        ? { position: "relative", zIndex: 1, pointerEvents: "none" }
+                        : { position: "absolute", top: 0, left: 0, right: 0, zIndex: 1, visibility: "hidden", pointerEvents: "none" }
+                      }
+                    >
+                      <div
+                        ref={(el) => { if (el) watchRefs1.current.set(size.id, el); else watchRefs1.current.delete(size.id); }}
+                        style={{ pointerEvents: "auto" }}
+                      >
+                        <WatchPreview
+                          caseColor={caseColorHex}
+                          caseSize={size.id}
+                          dialColor={dialColorHex}
+                          dialImage={dialImage}
+                          handsColor={handsColorHex}
+                          secondsColor={secondsColorHex}
+                          markerColor={markerColorHex}
+                          markerType={markerType}
+                          strapColor={strapColorHex}
+                          strapMaterial={strapMaterial}
+                          scale={1.32}
+                          compactStrap={showWrist}
+                          dialImageScale={dialImageScale}
+                          dialImageRotation={dialImageRotation}
+                          dialImageOffsetX={dialImageOffsetX}
+                          dialImageOffsetY={dialImageOffsetY}
+                          onDialImageDrag={(x, y) => { setDialImageOffsetX(x); setDialImageOffsetY(y); }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
+              <ExtrasPillRow extras={extraStraps} className="flex-shrink-0" />
               <TimeDisplay className="flex-shrink-0" />
+            </div>
+            {/* Bottom toolbar — 2 sections justified between: Price | (Skin/Line + Compare + Zoom) */}
+            <div className="absolute flex items-end justify-between gap-4" style={{ bottom: 64, left: 20, right: 20, zIndex: 50 }}>
+              {/* Section 1 — Price */}
+              <div>
+                <p className="text-[#9e9e9e] uppercase tracking-widest" style={{ fontSize: 9, fontWeight: 700 }}>Price</p>
+                <div className="flex items-baseline gap-1 mt-0.5">
+                  <span className="text-[#141414] tracking-tighter" style={{ fontSize: 36, fontWeight: 800 }}>${totalPrice}</span>
+                  <span className="text-[#737373]" style={{ fontSize: 11, fontWeight: 600 }}>USD</span>
+                </div>
+              </div>
+
+              {/* Section 2 — Skin/Line + Compare size + Zoom (stacked column) */}
+              <div className="flex flex-col items-end gap-2">
+              {showWrist && (
+                <div className="flex w-[160px] items-center gap-1 rounded-full border border-[#ddd5c8] bg-white/70 backdrop-blur-sm p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setWristStyle("skin")}
+                    aria-pressed={wristStyle === "skin"}
+                    className={`flex-1 h-8 rounded-full transition-colors ${wristStyle === "skin" ? "bg-[#111] text-white" : "text-[#666] hover:text-[#141414] hover:bg-black/5"}`}
+                    style={{ fontSize: 12, fontWeight: 700 }}
+                  >
+                    Skin
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setWristStyle("line")}
+                    aria-pressed={wristStyle === "line"}
+                    className={`flex-1 h-8 rounded-full transition-colors ${wristStyle === "line" ? "bg-[#111] text-white" : "text-[#666] hover:text-[#141414] hover:bg-black/5"}`}
+                    style={{ fontSize: 12, fontWeight: 700 }}
+                  >
+                    Line
+                  </button>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowWrist((w) => !w)}
+                aria-pressed={showWrist}
+                className={`w-[160px] flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-full border transition-all flex-shrink-0 ${
+                  showWrist
+                    ? "bg-[#111] text-white border-[#111]"
+                    : "border-[#ddd5c8] bg-white/70 backdrop-blur-sm text-[#666] hover:text-[#141414] hover:border-[#555] hover:bg-white"
+                }`}
+                aria-label="Toggle wrist size reference"
+              >
+                <span style={{ fontSize: 13, fontWeight: 700 }}>Compare size</span>
+              </button>
+              </div>
             </div>
           </div>
 
           {/* ── RIGHT: natural page flow ── */}
           <div className="lg:w-[54%] flex-shrink-0 lg:pr-1">
             <div className="flex flex-col gap-3 pt-4 pb-4 lg:pt-20">
+
+              {/* Heading + Reset — desktop only (mobile renders its own copy above the sticky preview) */}
+              <div className="hidden lg:flex items-center justify-between gap-3 px-1 mb-2">
+                <h1
+                  className="text-[#141414] tracking-[-1.5px]"
+                  style={{ fontSize: 24, fontWeight: 800 }}
+                >
+                  Build Your Watch
+                </h1>
+                <button
+                  type="button"
+                  onClick={() => setShowResetConfirm(true)}
+                  aria-hidden={isDefault}
+                  tabIndex={isDefault ? -1 : 0}
+                  className={`group flex items-center gap-1.5 h-9 px-3.5 rounded-full border border-[#ddd5c8] text-[#666] hover:text-[#141414] hover:border-[#555] hover:bg-black/5 active:bg-black/5 transition-all flex-shrink-0 ${isDefault ? "opacity-0 pointer-events-none" : ""}`}
+                  aria-label="Reset all customizations"
+                >
+                  <RotateCcw className="size-3.5 transition-transform duration-500 group-hover:rotate-[-200deg]" />
+                  <span style={{ fontSize: 13, fontWeight: 700 }}>Reset</span>
+                </button>
+              </div>
 
               <Section title="Case Size" info={caseSizeInfoPanel}>
                 {/* Mobile: card grid (2x2 for 4 sizes) */}
@@ -947,25 +1261,21 @@ export default function App() {
                         key={size.id}
                         type="button"
                         onClick={() => setCaseSize(size.id)}
-                        className={`relative aspect-[1/1] rounded-[28px] border transition-all flex items-center justify-center ${
+                        className={`relative h-20 rounded-[20px] border transition-all flex items-center justify-center ${
                           active
                             ? "bg-[#111] text-white border-[#111] shadow-[0px_8px_12px_rgba(0,0,0,0.14)]"
                             : "bg-white text-[#141414] border-[#ded9d1] hover:border-[#111]"
                         }`}
                       >
                         {size.isNew && (
-                          <span
-                            className={`absolute top-3 right-3 px-1.5 py-0.5 rounded-full text-[9px] font-bold tracking-wider ${
-                              active ? "bg-white text-[#111]" : "bg-[#b7121f] text-white"
-                            }`}
-                          >
+                          <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full text-[9px] font-bold tracking-wider bg-[#b7121f] text-white">
                             NEW
                           </span>
                         )}
                         <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.5px" }}>{size.label}</span>
                         {size.price && size.price !== "Included" && (
                           <span
-                            className={`absolute bottom-3 ${active ? "text-white/60" : "text-[#9e9e9e]"}`}
+                            className={`absolute bottom-2 ${active ? "text-white/60" : "text-[#9e9e9e]"}`}
                             style={{ fontSize: 10, fontWeight: 600 }}
                           >
                             {size.price}
@@ -994,7 +1304,7 @@ export default function App() {
                       {t === "color" ? "Color" : (
                         <span className="flex items-center justify-center gap-1.5">
                           Upload image
-                          <span className="bg-[#111] text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full tracking-wide">+$25</span>
+                          <span className="mt-0.5 text-[#9e9e9e]" style={{ fontSize: 10, fontWeight: 600 }}>+$25</span>
                         </span>
                       )}
                     </button>
@@ -1006,17 +1316,64 @@ export default function App() {
                   <div className="flex flex-col gap-3">
                     <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFile(e.target.files?.[0] ?? null)} />
                     {dialImage ? (
-                      <div className="bg-white/75 border border-dashed border-[#bfb8ad] rounded-[10px] px-4 py-3 flex items-center gap-3">
-                        <img src={dialImage} alt="uploaded dial" className="size-[72px] object-cover shadow-[2px_2px_4px_rgba(0,0,0,0.25)]" />
-                        <div className="flex-1 text-center text-black tracking-[-0.04em] truncate" style={{ fontSize: 16 }}>{dialImageName || "uploaded.png"}</div>
-                        <button type="button" onClick={clearImage} className="size-9 flex items-center justify-center text-[#33363F] hover:bg-black/5 rounded-full" aria-label="Remove image"><X className="size-4" strokeWidth={2.5} /></button>
-                      </div>
+                      <>
+                        <div className="bg-white/75 border border-dashed border-[#bfb8ad] rounded-[10px] px-4 py-3 flex items-center gap-3">
+                          <img src={dialImage} alt="uploaded dial" className="size-[72px] object-cover shadow-[2px_2px_4px_rgba(0,0,0,0.25)]" />
+                          <div className="flex-1 text-center text-black tracking-[-0.04em] truncate" style={{ fontSize: 16 }}>{dialImageName || "uploaded.png"}</div>
+                          <button type="button" onClick={clearImage} className="size-9 flex items-center justify-center text-[#33363F] hover:bg-black/5 rounded-full" aria-label="Remove image"><X className="size-4" strokeWidth={2.5} /></button>
+                        </div>
+                        {/* Image transform controls — scale, rotation; drag the watch dial to reposition */}
+                        <div className="flex flex-col gap-3 bg-[#fafafa] border border-[#ede9e2] rounded-2xl px-4 py-3">
+                          <div className="flex items-center justify-between">
+                            <span className="uppercase tracking-wider text-[#666]" style={{ fontSize: 10, fontWeight: 700 }}>Adjust image</span>
+                            <button
+                              type="button"
+                              onClick={resetDialImageTransform}
+                              className="text-[#888] hover:text-[#141414] transition-colors"
+                              style={{ fontSize: 11, fontWeight: 600 }}
+                            >
+                              Reset
+                            </button>
+                          </div>
+                          <label className="flex flex-col gap-1">
+                            <div className="flex items-center justify-between" style={{ fontSize: 12, fontWeight: 600 }}>
+                              <span className="text-[#181612]">Zoom</span>
+                              <span className="text-[#737373]">{dialImageScale}%</span>
+                            </div>
+                            <input
+                              type="range"
+                              min={50}
+                              max={200}
+                              step={1}
+                              value={dialImageScale}
+                              onChange={(e) => setDialImageScale(Number(e.target.value))}
+                              className="w-full accent-[#111]"
+                            />
+                          </label>
+                          <label className="flex flex-col gap-1">
+                            <div className="flex items-center justify-between" style={{ fontSize: 12, fontWeight: 600 }}>
+                              <span className="text-[#181612]">Rotation</span>
+                              <span className="text-[#737373]">{dialImageRotation}°</span>
+                            </div>
+                            <input
+                              type="range"
+                              min={-180}
+                              max={180}
+                              step={1}
+                              value={dialImageRotation}
+                              onChange={(e) => setDialImageRotation(Number(e.target.value))}
+                              className="w-full accent-[#111]"
+                            />
+                          </label>
+                          <p className="text-[#9e9e9e]" style={{ fontSize: 11 }}>Drag the image on the dial preview to reposition.</p>
+                        </div>
+                      </>
                     ) : (
                       <button type="button" onClick={() => fileRef.current?.click()} className="bg-white/75 border border-dashed border-[#bfb8ad] rounded-[10px] px-5 py-5 flex items-center justify-center gap-3 text-black hover:bg-white" style={{ fontSize: 18 }}>
                         <Upload className="size-5" /> Choose File
                       </button>
                     )}
-                    <p className="text-[#9e9e9e]" style={{ fontSize: 13 }}>When an image is uploaded, hour markers become Empty.</p>
+                    {!dialImage && <p className="text-[#9e9e9e]" style={{ fontSize: 13 }}>When an image is uploaded, hour markers become Empty.</p>}
                   </div>
                 )}
               </Section>
@@ -1032,13 +1389,13 @@ export default function App() {
                           <path d={svgPaths.p24df2f00} fill={markerType === "dots" ? "rgba(255,255,255,0.8)" : "rgba(0,0,0,0.8)"} />
                         </svg>
                       )},
-                      { id: "empty",  preview: null },
+                      { id: "empty",  preview: <CircleSlash className={`size-9 ${markerType === "empty" ? "text-white/80" : "text-black/40"}`} strokeWidth={1.5} /> },
                     ].map(({ id, preview }) => {
                       const label = HOUR_MARKER_TYPES.find((m) => m.id === id)?.label ?? id;
                       const active = markerType === id;
                       return (
                         <button key={id} type="button" onClick={() => setMarkerType(id)} className="flex flex-col gap-1.5 items-center w-full lg:w-auto">
-                          <div className={`flex items-center justify-center w-full lg:w-[90px] aspect-[9/10] lg:aspect-auto lg:h-[100px] rounded-[24px] transition ${active ? "bg-[#111] shadow-[0px_10px_12px_rgba(0,0,0,0.14)]" : "bg-white border border-[#ded9d1] hover:border-[#111]"}`}>
+                          <div className={`flex items-center justify-center w-full lg:w-[90px] h-20 lg:h-[100px] rounded-[20px] lg:rounded-[24px] transition ${active ? "bg-[#111] shadow-[0px_10px_12px_rgba(0,0,0,0.14)]" : "bg-white border border-[#ded9d1] hover:border-[#111]"}`}>
                             {preview}
                           </div>
                           <span className="text-[#272727]" style={{ fontSize: 14 }}>{label}</span>
@@ -1047,7 +1404,12 @@ export default function App() {
                     })}
                   </div>
                 </div>
-                {imageUploaded && <p className="mt-3 text-[#9e9e9e]" style={{ fontSize: 13 }}>Locked to <strong>Empty</strong> while a dial image is active.</p>}
+                {imageUploaded && (
+                  <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-xl bg-[#f0ece4] border border-[#e2ddd1]" style={{ fontSize: 12 }}>
+                    <Info className="size-3.5 text-[#888] flex-shrink-0" />
+                    <span className="text-[#666]">Hour markers are hidden while a custom dial image is in use.</span>
+                  </div>
+                )}
               </Section>
 
               <Section title="Hour Marker Colors" info={hourMarkerColorInfoPanel}>
@@ -1087,130 +1449,113 @@ export default function App() {
                 <SwatchRow options={SECONDS_COLORS} value={secondsColor} onSelect={setSecondsColor} />
               </Section>
 
-              <Section title="Strap" info={strapInfoPanel}>
-                {/* Material tabs */}
-                <div className="bg-[#fafafa] border border-[#e9eaeb] rounded-full p-1 flex w-full mb-4">
+              {/* ── Main Strap: all materials grouped on one page; tap a swatch to set as primary ── */}
+              <Section title="Main Strap" info={strapInfoPanel}>
+                <div className="flex flex-col gap-5">
                   {STRAP_GROUPS.map((group) => (
-                    <button
-                      key={group.id}
-                      type="button"
-                      onClick={() => setStrapTab(group.id)}
-                      className={`flex-1 h-8 rounded-full transition flex items-center justify-center gap-1.5 ${
-                        strapTab === group.id
-                          ? "bg-white shadow-[0px_1px_3px_rgba(10,13,18,0.1)] text-[#414651]"
-                          : "text-[#717680]"
-                      }`}
-                      style={{ fontSize: 13, fontWeight: 600 }}
-                    >
-                      <span>{group.label}</span>
-                      {group.price !== "Included" && (
-                        <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full tracking-wide ${
-                          strapTab === group.id ? "bg-[#111] text-white" : "bg-[#e8e4de] text-[#737373]"
-                        }`}>{group.price}</span>
-                      )}
-                    </button>
+                    <div key={group.id}>
+                      <div className="flex items-center justify-between mb-2 px-1">
+                        <span className="text-[#181612] uppercase tracking-[0.14em]" style={{ fontSize: 11, fontWeight: 700 }}>{group.label}</span>
+                        <span className={`${group.price === "Included" ? "text-[#9e9e9e]" : "text-[#181612]"}`} style={{ fontSize: 11, fontWeight: 600 }}>{group.price}</span>
+                      </div>
+                      <div className="grid gap-x-2 gap-y-8" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(72px, 1fr))" }}>
+                        {group.colors.map((o) => {
+                          const isPrimary = primaryStrap === o.id;
+                          return (
+                            <button
+                              key={o.id}
+                              type="button"
+                              onClick={() => setPrimaryStrap(o.id)}
+                              className="flex flex-col items-center justify-center gap-1 h-[100px] px-1 rounded-xl transition hover:bg-black/5"
+                            >
+                              <div
+                                className={`relative rounded-full size-[50px] shadow-[inset_0px_-2.9px_5.8px_rgba(0,0,0,0.08),inset_0px_2.9px_5.8px_rgba(255,255,255,0.18)] ${isPrimary ? "ring-2 ring-offset-2 ring-[#111]" : "ring-1 ring-black/10"}`}
+                                style={{ background: o.color }}
+                              >
+                                {isPrimary && <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-2 rounded-full bg-white shadow ring-1 ring-black/30" />}
+                              </div>
+                              <span className="uppercase text-[#181612] text-center mt-2" style={{ fontSize: 12, fontWeight: 600 }}>{o.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   ))}
                 </div>
+                {/* Selected indicator */}
+                <div className="mt-4 flex items-center gap-2 px-3 py-2 rounded-xl bg-[#f0ece4] border border-[#e2ddd1]">
+                  <span className="text-[#666] uppercase tracking-wider" style={{ fontSize: 10, fontWeight: 700 }}>Main</span>
+                  <div className="rounded-full size-4 ring-1 ring-black/10" style={{ background: strapColorHex }} />
+                  <span className="text-[#181612]" style={{ fontSize: 12, fontWeight: 600 }}>
+                    {strapMaterial.charAt(0).toUpperCase() + strapMaterial.slice(1)} · {strapInfo?.label ?? ""}
+                  </span>
+                </div>
+              </Section>
 
-                {/* Colors for active tab */}
-                {(() => {
-                  const group = STRAP_GROUPS.find((g) => g.id === strapTab)!;
-                  return (
-                    <div className="flex flex-col gap-2" style={{ minHeight: 292 }}>
-                      {group.colors.map((o) => {
-                        const isPrimary  = primaryStrap === o.id;
-                        const extraCount = extraStraps.filter((x) => x === o.id).length;
-                        const priceEach  = extraStrapUnitPrice(o.id);
+              {/* ── Additional Straps: collapsible card (Section handles the +/− toggle in the header) ── */}
+              <Section title="Additional Straps" collapsible>
+                <p className="text-[#9e9e9e] mb-3 px-1" style={{ fontSize: 13 }}>Order extra straps to swap later. Each is sold separately and priced by material.</p>
+                <div className="flex flex-col gap-5">
+                      {STRAP_GROUPS.map((group) => {
+                        const perEach = extraStrapUnitPrice(group.colors[0]?.id ?? "");
                         return (
-                          <div
-                            key={o.id}
-                            onClick={() => setPrimaryStrap(o.id)}
-                            className={`group flex items-center gap-3 rounded-2xl px-4 py-2.5 border transition-all cursor-pointer ${
-                              isPrimary ? "bg-[#111] border-[#111]" : "bg-white/60 hover:border-[#888]"
-                            }`}
-                          >
-                            <div className="relative flex-shrink-0">
-                              <div
-                                className="rounded-full size-8 ring-1 ring-black/10"
-                                style={{ background: o.color, boxShadow: "inset 0px -2px 4px rgba(0,0,0,0.08), inset 0px 2px 4px rgba(255,255,255,0.18)" }}
-                              />
-
+                          <div key={group.id}>
+                            <div className="flex items-center justify-between mb-2 px-1">
+                              <span className="text-[#181612] uppercase tracking-[0.14em]" style={{ fontSize: 11, fontWeight: 700 }}>{group.label}</span>
+                              <span className="text-[#181612]" style={{ fontSize: 11, fontWeight: 600 }}>+${perEach}/each</span>
                             </div>
-
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className={isPrimary ? "text-white" : "text-[#181612]"} style={{ fontSize: 13, fontWeight: 600 }}>{o.label}</span>
-                                {isPrimary && (
-                                  <span className="text-white/60 uppercase tracking-widest" style={{ fontSize: 9, fontWeight: 700 }}>Main</span>
-                                )}
-                              </div>
-
+                            <div className="grid gap-x-2 gap-y-6" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(72px, 1fr))" }}>
+                              {group.colors.map((o) => {
+                                const count = extraStraps.filter((x) => x === o.id).length;
+                                const active = count > 0;
+                                return (
+                                  <div key={o.id} className="flex flex-col items-center gap-2 px-1">
+                                    <div
+                                      className={`relative rounded-full size-[50px] shadow-[inset_0px_-2.9px_5.8px_rgba(0,0,0,0.08),inset_0px_2.9px_5.8px_rgba(255,255,255,0.18)] ${active ? "ring-2 ring-offset-2 ring-[#111]" : "ring-1 ring-black/10"}`}
+                                      style={{ background: o.color }}
+                                    />
+                                    <span className="uppercase text-[#181612] text-center" style={{ fontSize: 12, fontWeight: 600 }}>{o.label}</span>
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => removeOneExtraStrap(o.id)}
+                                        disabled={count === 0}
+                                        aria-label={`Remove one ${o.label}`}
+                                        className="size-6 rounded-full border border-[#ded9d1] text-[#444] hover:bg-black/5 disabled:opacity-30 disabled:hover:bg-transparent flex items-center justify-center transition"
+                                      >
+                                        <Minus className="size-3" strokeWidth={2.5} />
+                                      </button>
+                                      <span className="w-5 text-center text-[#181612] tabular-nums" style={{ fontSize: 12, fontWeight: 700 }}>{count}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => addExtraStrap(o.id)}
+                                        aria-label={`Add one ${o.label}`}
+                                        className="size-6 rounded-full border border-[#ded9d1] text-[#444] hover:bg-black/5 flex items-center justify-center transition"
+                                      >
+                                        <Plus className="size-3" strokeWidth={2.5} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
-
-                            {extraCount > 0 ? (
-                              <div className="flex items-center gap-1 flex-shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); removeOneExtraStrap(o.id); }}
-                                  aria-label="Remove one"
-                                  className={`size-10 lg:size-6 rounded-full border flex items-center justify-center transition ${
-                                    isPrimary ? "border-white/30 text-white/70 hover:bg-white/10" : "border-[#ded9d1] text-[#444] hover:bg-black/5"
-                                  }`}
-                                >
-                                  <Minus className="size-4 lg:size-3" strokeWidth={2.5} />
-                                </button>
-                                <span className={`w-5 lg:w-4 text-center text-sm lg:text-xs font-bold ${isPrimary ? "text-white" : "text-[#181612]"}`}>{extraCount}</span>
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); addExtraStrap(o.id); }}
-                                  aria-label="Add one"
-                                  className={`size-10 lg:size-6 rounded-full border flex items-center justify-center transition ${
-                                    isPrimary ? "border-white/30 text-white/70 hover:bg-white/10" : "border-[#ded9d1] text-[#444] hover:bg-black/5"
-                                  }`}
-                                >
-                                  <Plus className="size-4 lg:size-3" strokeWidth={2.5} />
-                                </button>
-
-                              </div>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); addExtraStrap(o.id); }}
-                                aria-label="Add extra"
-                                className={`flex items-center justify-center flex-shrink-0 rounded-full transition-all
-                                  size-10 lg:h-7 lg:w-auto lg:px-3 lg:gap-1
-                                  lg:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100
-                                  ${
-                                    isPrimary
-                                      ? "bg-white/20 text-white active:bg-white/30 lg:bg-transparent lg:text-white/80 lg:border lg:border-white/30 lg:hover:border-white lg:hover:bg-white/10"
-                                      : "bg-[#1a1a1a] text-white active:bg-[#333] lg:bg-transparent lg:text-[#555] lg:border lg:border-[#ded9d1] lg:hover:bg-[#111] lg:hover:text-white lg:hover:border-[#111]"
-                                  }`}
-                              >
-                                <Plus className="size-5 lg:size-3 flex-shrink-0" strokeWidth={2.5} />
-                                <span className="hidden lg:inline text-[11px] font-bold tracking-wide">Add Extra</span>
-                              </button>
-                            )}
                           </div>
                         );
-                      })}
-                    </div>
-                  );
-                })()}
-
-                {/* Extra straps total — always rendered to keep card height static */}
-                <div className={`mt-3 flex items-center justify-between px-1 transition-opacity duration-200 ${extraStraps.length > 0 ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
-                  <span className="text-[#8a8275]" style={{ fontSize: 12 }}>
-                    {extraStraps.length} extra strap{extraStraps.length !== 1 ? "s" : ""} added
+                  })}
+                </div>
+                {/* Extras total — styled like Main Strap's "Selected" indicator bar */}
+                <div className={`mt-4 flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-[#f0ece4] border border-[#e2ddd1] transition-opacity duration-200 ${extraStraps.length > 0 ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+                  <span className="text-[#666] uppercase tracking-wider" style={{ fontSize: 10, fontWeight: 700 }}>Extras</span>
+                  <span className="text-[#181612] flex-1" style={{ fontSize: 12, fontWeight: 600 }}>
+                    {extraStraps.length} strap{extraStraps.length !== 1 ? "s" : ""} added
                   </span>
                   <span className="text-[#181612]" style={{ fontSize: 13, fontWeight: 700 }}>+${extraStrapTotal}</span>
                 </div>
               </Section>
 
-            </div>{/* end sections */}
-
-            {/* Sticky Review & Order — desktop only; mobile uses BUY NOW in the preview area */}
-            <div className="hidden lg:block sticky bottom-0 z-10">
-              <div className="pb-12" style={{ background: "#F2EEE8", borderTopLeftRadius: 32, borderTopRightRadius: 32 }}>
+              {/* End-of-menu Review & Order — sits at the bottom of the menu flow (not sticky).
+                  Doubles as the IntersectionObserver target that fades the in-preview BUY NOW when it enters view. */}
+              <div ref={buyNowSentinelRef} className="mt-2">
                 <button
                   type="button"
                   onClick={() => setShowReview(true)}
@@ -1218,9 +1563,11 @@ export default function App() {
                   style={{ fontSize: 15, fontWeight: 700, letterSpacing: "0.03em", height: 52 }}
                 >
                   <span>Review &amp; Order</span>
+                  <span className="lg:hidden bg-white/15 px-3 py-1 rounded-full" style={{ fontSize: 14, fontWeight: 800 }}>${totalPrice}</span>
                 </button>
               </div>
-            </div>
+
+            </div>{/* end sections */}
           </div>{/* end RIGHT */}
         </div>{/* end columns */}
       </div>{/* end background */}
