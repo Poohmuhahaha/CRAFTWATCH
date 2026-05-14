@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useId } from "react";
 import { Upload, X, RotateCcw, Info, Plus, Minus, CircleSlash, Maximize2, Minimize2 } from "lucide-react";
 import svgPaths from "../imports/Section-1-1/svg-n6f01f9iwu";
-import confetti from "canvas-confetti";
 import { Tooltip, TooltipTrigger, TooltipContent } from "./components/ui/tooltip";
 
 // ── TYPES ─────────────────────────────────────────────────────────────────
@@ -713,9 +712,6 @@ function SuccessModal({ open, onClose, totalPrice }: { open: boolean; onClose: (
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }} onClick={onClose}>
       <div className="bg-white rounded-[32px] w-full max-w-sm p-8 shadow-[0_32px_80px_rgba(0,0,0,0.35)] flex flex-col items-center gap-5 text-center" onClick={(e) => e.stopPropagation()}>
-        <div className="size-16 rounded-full bg-[#111] flex items-center justify-center">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-        </div>
         <div>
           <h2 className="text-[#141414] tracking-[-1px]" style={{ fontSize: 26, fontWeight: 800 }}>Order Placed!</h2>
           <p className="text-[#737373] mt-1" style={{ fontSize: 14 }}>Your CRAFTWATCH is being crafted.</p>
@@ -876,7 +872,6 @@ export default function App() {
 
   const handleConfirmOrder = () => {
     setShowReview(false);
-    confetti({ particleCount: 130, spread: 80, origin: { y: 0.6 }, colors: ["#111", "#c8ccd1", "#d4af6a", "#a8302b", "#1a9e84"] });
     setShowSuccess(true);
   };
 
@@ -1097,7 +1092,7 @@ export default function App() {
           </div>
           <TimeDisplay style={{ position: "absolute", right: 16, top: 16, zIndex: 30 }} />
 
-          {/* Row 2 — BUY NOW (bottom-left) + Compare Size (bottom-right) */}
+          {/* Row 2 — Review and Order (bottom-left) + Compare Size (bottom-right) */}
           <button
             type="button"
             onClick={() => setShowReview(true)}
@@ -1111,7 +1106,7 @@ export default function App() {
               transition: "opacity 0.3s ease",
             }}
           >
-            BUY NOW
+            Review and Order
           </button>
           <button
             type="button"
@@ -1537,22 +1532,23 @@ export default function App() {
                                       style={{ background: o.color }}
                                     />
                                     <span className="uppercase text-[#181612] text-center" style={{ fontSize: 12, fontWeight: 600 }}>{o.label}</span>
-                                    <div className="flex items-center gap-1">
+                                    {/* Unified pill stepper — −/count/+ share one rounded border so the whole control fits the 72px grid cell while keeping tap targets workable on mobile */}
+                                    <div className="inline-flex h-7 items-center rounded-full border border-[#ded9d1] bg-white overflow-hidden">
                                       <button
                                         type="button"
                                         onClick={() => removeOneExtraStrap(o.id)}
                                         disabled={count === 0}
                                         aria-label={`Remove one ${o.label}`}
-                                        className="size-6 rounded-full border border-[#ded9d1] text-[#444] hover:bg-black/5 disabled:opacity-30 disabled:hover:bg-transparent flex items-center justify-center transition"
+                                        className="h-full px-2 text-[#444] hover:bg-black/5 disabled:opacity-30 disabled:hover:bg-transparent flex items-center transition"
                                       >
                                         <Minus className="size-3" strokeWidth={2.5} />
                                       </button>
-                                      <span className="w-5 text-center text-[#181612] tabular-nums" style={{ fontSize: 12, fontWeight: 700 }}>{count}</span>
+                                      <span className="min-w-[14px] text-center text-[#181612] tabular-nums font-bold text-xs">{count}</span>
                                       <button
                                         type="button"
                                         onClick={() => addExtraStrap(o.id)}
                                         aria-label={`Add one ${o.label}`}
-                                        className="size-6 rounded-full border border-[#ded9d1] text-[#444] hover:bg-black/5 flex items-center justify-center transition"
+                                        className="h-full px-2 text-[#444] hover:bg-black/5 flex items-center transition"
                                       >
                                         <Plus className="size-3" strokeWidth={2.5} />
                                       </button>
