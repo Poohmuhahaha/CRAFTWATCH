@@ -15,7 +15,10 @@
       "Bash(npx tsc *)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "WebSearch",
+      "Read(//c/Users/Admin/Downloads/**)",
+      "Bash(npm install *)"
     ]
   }
 }
