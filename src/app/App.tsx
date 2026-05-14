@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useLayoutEffect, useId } from "reac
 import { Upload, X, RotateCcw, Info, Plus, Minus, CircleSlash, Maximize2, Minimize2 } from "lucide-react";
 import svgPaths from "../imports/Section-1-1/svg-n6f01f9iwu";
 import { Tooltip, TooltipTrigger, TooltipContent } from "./components/ui/tooltip";
+import Lenis from "lenis";
 
 // ── TYPES ─────────────────────────────────────────────────────────────────
 
@@ -150,7 +151,7 @@ function WristReference({ show, zoom = 1, variant = "skin" }: { show: boolean; z
         </linearGradient>
         <linearGradient id={armRightFadeId} x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%"   stopColor="white" stopOpacity="1" />
-          <stop offset="55%"  stopColor="white" stopOpacity="1" />
+          <stop offset="60%"  stopColor="white" stopOpacity="1" />
           <stop offset="78%"  stopColor="black" stopOpacity="0" />
           <stop offset="100%" stopColor="black" stopOpacity="0" />
         </linearGradient>
@@ -183,6 +184,245 @@ function WristReference({ show, zoom = 1, variant = "skin" }: { show: boolean; z
         </>
       )}
     </svg>
+  );
+}
+
+// ── WRIST OUTLINE ──────────────────────────────────────────────────────────
+// Designer-provided hand + forearm silhouette. Source SVG is 1132×678 but the actual
+// drawing only spans roughly y=160–551, so we crop the viewBox vertically to remove
+// empty padding. Wrist sits near x≈740 → shift left so it lands on the preview centre.
+function WristOutline({ show, baseSize }: { show: boolean; baseSize: number }) {
+  const uid = useId().replace(/:/g, "");
+  const filterId = `wo-filter-${uid}`;
+  const fadeGradId = `wo-fadegrad-${uid}`;
+  const fadeMaskId = `wo-fademask-${uid}`;
+  const SVG_W = 500;
+  const VB_Y = 130;
+  const VB_H = 430;
+  const WRIST_X = 740; // approximate wrist position inside the source viewBox
+  const shiftPct = ((SVG_W / 2) - WRIST_X) / SVG_W * 100; // negative = shift left
+  return (
+    <svg
+      className="absolute pointer-events-none"
+      style={{
+        left: "80%", top: "22%",
+        transform: `translate(-50%, -50%) translateX(${shiftPct}%)`,
+        zIndex: 0,
+        opacity: show ? 1 : 0,
+        transition: "opacity 0.5s cubic-bezier(0.32, 0.72, 0, 1)",
+        willChange: "opacity",
+        overflow: "visible",
+      }}
+      width={baseSize}
+      height={baseSize * (VB_H / SVG_W)}
+      viewBox={`0 ${VB_Y} ${SVG_W} ${VB_H}`}
+      fill="none"
+      aria-hidden="true"
+    >
+     
+      <defs>
+        <filter id={filterId} x="2.11487" y="160.615" width="1097.61" height="390.478" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
+          <feFlood floodOpacity="0" result="BackgroundImageFix" />
+          <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape" />
+          <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha" />
+          <feOffset dx="11" dy="7" />
+          <feGaussianBlur stdDeviation="10.9" />
+          <feComposite in2="hardAlpha" operator="arithmetic" k2="-4" k3="1" />
+          <feColorMatrix type="matrix" values="0 0 0 0 0.418269 0 0 0 0 0.39625 0 0 0 0 0.271473 0 0 0 0.25 0" />
+          <feBlend mode="normal" in2="shape" result="effect1_innerShadow" />
+        </filter>
+        {/* Gradient + mask must span the FULL path content area (x=0–1100, paths extend past the viewBox).
+            Covering only the viewBox area would mask away everything outside it. */}
+        <linearGradient id={fadeGradId} x1="0" y1="0" x2="790" y2="0" gradientUnits="userSpaceOnUse">
+          <stop offset="0%"   stopColor="white" stopOpacity="1" />
+          <stop offset="60%"  stopColor="white" stopOpacity="1" />
+          <stop offset="100%" stopColor="white" stopOpacity="0" />
+        </linearGradient>
+        <mask id={fadeMaskId} maskUnits="userSpaceOnUse" x="0" y="0" width="1100" height="700">
+          <rect x="0" y="0" width="1100" height="700" fill={`url(#${fadeGradId})`} />
+        </mask>
+      </defs>
+      <g mask={`url(#${fadeMaskId})`}>
+        <g filter={`url(#${filterId})`}>
+          <path d="M911.6 313.948C924.782 309.425 945.596 297.819 955.685 288.122C960.546 283.45 967.467 265.905 960.455 260.277C952.808 257.829 935.081 267.74 925.046 269.488C912.837 271.614 904.017 270.402 891.694 271.835C876.774 273.57 865.159 279.265 851.319 282.81C842.129 285.164 830.122 283.805 820.2 287.926C811.866 291.18 805.766 297.644 797.853 301.841C773.918 314.539 748.557 325.096 723.133 334.431C718.197 336.243 715.284 334.357 710.383 333.755C693.076 331.663 675.737 329.844 658.371 328.301C601.797 323.431 548.109 325.878 492.317 316.187C462.441 310.712 432.878 303.663 403.744 295.068C377.388 287.471 351.084 279.215 324.431 272.735C281.605 262.323 239.354 261.114 197.747 245.264C168.059 233.956 148.331 219.701 121.883 202.983C101.846 190.203 81.4253 178.04 60.6414 166.508L7.14494 340.959C31.2799 347.631 57.8244 360.088 80.9993 369.89C93.8472 375.328 108.364 381.453 120.761 387.768C132.12 393.563 141.265 405.431 153.538 410.601C174.883 419.602 199.028 422.741 221.563 427.588C242.85 432.175 263.914 437.807 285.079 442.071C302.712 445.525 320.5 448.114 338.381 449.827C408.173 456.891 481.749 452.998 551.815 449.324L617.806 445.63C625.845 445.172 654.167 442.729 660.341 444.687C700.338 457.356 738.749 480.355 778.709 493.527C797.08 499.584 816.207 503.033 835.024 505.965C850.635 508.395 862.918 508.723 877.99 513.905C890.203 518.035 902.164 522.874 913.804 528.417C922.984 532.853 933.273 540.254 943.885 540.09C949.805 539.815 963.748 537.456 962.574 529.191C961.842 523.451 954.612 514.885 949.493 511.941C939.674 506.3 930.806 497.967 921.13 492.389C912.278 487.285 902.112 484.805 893.915 478.177C896.148 470.782 916.629 477.331 921.337 478.681C948.99 486.607 971.246 505.133 996.707 517.623C1007.76 523.045 1022.06 529.676 1033.74 522.011C1042.54 515.924 1035.81 505.316 1030.22 499.557C1023.85 492.981 1015.37 488.698 1008.09 483.204C994.736 473.886 981.873 463.268 967.494 455.595C960.142 451.656 928.056 442.38 924.631 438.516L924.73 437.11C927.899 433.423 936.819 431.674 941.363 432.586C969.107 438.158 996.696 448.307 1022.9 458.927C1036.46 464.805 1045.76 471.447 1060.6 474.791C1079.07 478.953 1092.46 470.357 1079.68 451.682C1077.05 447.838 1071.68 442.406 1067.51 439.816C1043.56 424.953 1017.5 411.488 991.55 400.466C980.664 396.17 943.544 388.791 931.299 386.665C933.768 384.816 936.523 382.92 939.05 381.115C960.282 380.108 978.441 379.715 999.203 384.525C1005.65 386.019 1013.43 385.95 1020.09 387.585C1030.45 390.129 1040.5 393.848 1051.07 395.48C1081.86 399.304 1090.78 380 1061.12 365.537C1046.53 357.385 1028.68 353.874 1013.57 347.848C987.776 337.554 963.612 340.447 936.838 337.17C927.79 336.062 917.892 333.562 908.705 332.009C897.367 330.091 886.575 328.984 875.051 328.25C879.828 325.532 885.832 322.784 891.083 321.323C899.491 318.983 900.532 318.774 906.765 313.075L911.6 313.948Z" fill="#E3E3E3" />
+      </g>
+        <path d="M961.065 258.373C958.638 257.596 955.669 257.851 952.694 258.481C949.66 259.123 946.307 260.226 942.969 261.427C941.294 262.03 939.602 262.665 937.942 263.287C936.278 263.911 934.645 264.521 933.067 265.083C929.887 266.215 927.032 267.112 924.702 267.518L924.703 267.518C918.747 268.555 913.608 268.781 908.359 268.922C903.124 269.063 897.734 269.12 891.463 269.849C883.812 270.739 877.034 272.641 870.491 274.739C863.9 276.853 857.666 279.12 850.823 280.873C846.436 281.997 841.384 282.232 835.861 282.713C830.467 283.183 824.731 283.887 819.473 286.063C815.056 287.787 811.274 290.347 807.704 292.904C804.081 295.499 800.721 298.055 796.916 300.074C773.088 312.715 747.818 323.237 722.444 332.554L722.443 332.554C720.37 333.315 718.769 333.303 717.068 333.025C716.164 332.877 715.27 332.661 714.186 332.418C713.13 332.181 711.952 331.933 710.627 331.77L710.623 331.77C693.295 329.675 675.935 327.853 658.548 326.308L658.542 326.308C630.2 323.869 602.549 323.259 575.138 322.054C547.699 320.847 520.439 319.041 492.678 314.22L492.678 314.22C462.871 308.757 433.376 301.725 404.31 293.15L404.297 293.146C378.002 285.566 351.61 277.285 324.903 270.791C303.399 265.563 282 262.638 260.966 259.067C239.882 255.488 219.074 251.248 198.459 243.395C169.012 232.178 149.505 218.078 122.959 201.297L119.191 198.903C100.329 186.974 81.1304 175.589 61.612 164.759L59.4531 163.562L4.62984 342.339L6.61206 342.886C30.5808 349.512 56.9287 361.88 80.2208 371.732L80.2196 371.732C93.0847 377.177 107.533 383.273 119.854 389.549L119.853 389.55C125.289 392.324 130.222 396.565 135.531 400.96C140.594 405.15 145.972 409.453 152.16 412.186L152.761 412.445C174.337 421.542 198.837 424.746 221.143 429.543L221.143 429.542C242.214 434.083 263.59 439.782 284.684 444.031L284.695 444.034C302.392 447.5 320.244 450.099 338.19 451.818L338.19 451.817C408.159 458.898 481.888 454.993 551.92 451.32L551.927 451.32L617.917 447.627L617.919 447.627C622.041 447.392 630.991 446.674 639.869 446.25C644.282 446.039 648.608 445.906 652.199 445.944C655.893 445.984 658.523 446.209 659.736 446.594L659.737 446.594C679.6 452.885 699.092 461.749 718.706 470.736C738.279 479.705 757.977 488.799 778.082 495.426C796.617 501.538 815.881 505.007 834.716 507.941C850.592 510.412 862.491 510.691 877.339 515.796L877.349 515.8C889.488 519.904 901.376 524.715 912.944 530.223L912.945 530.223C915.185 531.305 917.498 532.572 919.93 533.894C922.349 535.207 924.873 536.568 927.453 537.787C932.595 540.216 938.153 542.179 943.916 542.09L943.947 542.089L943.977 542.088C947.06 541.945 952.275 541.264 956.643 539.49C958.824 538.604 960.955 537.38 962.476 535.671C964.048 533.903 964.934 531.641 964.558 528.938L964.512 528.615C963.979 525.271 961.77 521.482 959.251 518.281C956.617 514.933 953.345 511.85 950.49 510.208L950.489 510.207C945.703 507.457 941.127 504.039 936.456 500.541C931.822 497.07 927.089 493.516 922.129 490.656C917.585 488.036 912.665 486.071 908.093 484.029C904.014 482.207 900.126 480.292 896.604 477.719C897.071 477.383 897.775 477.1 898.825 476.916C900.816 476.567 903.48 476.698 906.407 477.129C912.229 477.986 918.365 479.91 920.787 480.604C934.363 484.495 946.664 491.002 958.83 498.164C970.93 505.287 983.005 513.129 995.826 519.418C1001.33 522.119 1007.88 525.244 1014.57 526.68C1021.3 528.125 1028.4 527.907 1034.83 523.682L1034.85 523.669L1034.87 523.656C1037.42 521.895 1038.96 519.71 1039.62 517.262C1040.26 514.853 1040 512.376 1039.29 510.069C1037.87 505.504 1034.55 501.144 1031.66 498.165C1028.32 494.724 1024.47 491.916 1020.61 489.317C1016.7 486.679 1012.88 484.313 1009.3 481.607L1009.27 481.585L1009.24 481.564C996.475 472.661 983.771 462.25 969.792 454.565L968.435 453.83C966.446 452.765 962.922 451.4 958.858 449.927C954.751 448.439 949.915 446.78 945.253 445.14C940.569 443.493 936.05 441.863 932.497 440.409C930.718 439.682 929.217 439.013 928.074 438.422C927.59 438.171 927.208 437.953 926.915 437.77C928.242 436.671 930.428 435.699 933.008 435.065C936.031 434.323 939.082 434.168 940.969 434.547C968.515 440.078 995.955 450.165 1022.13 460.772C1028.87 463.695 1034.4 466.737 1040.4 469.613C1046.35 472.461 1052.53 475.024 1060.16 476.742C1064.96 477.824 1069.5 478.096 1073.44 477.543C1077.37 476.992 1080.82 475.601 1083.25 473.231C1085.73 470.808 1086.97 467.52 1086.68 463.607C1086.39 459.765 1084.64 455.389 1081.33 450.552C1078.57 446.516 1073.01 440.875 1068.56 438.117L1066.31 436.723C1042.89 422.356 1017.56 409.341 992.332 398.626L992.309 398.615L992.284 398.606C986.66 396.386 974.486 393.435 962.359 390.797C952.721 388.7 942.973 386.775 936.272 385.531C937.423 384.716 938.585 383.898 939.727 383.085C960.687 382.101 978.467 381.774 998.752 386.474C1002.12 387.254 1005.81 387.622 1009.36 387.992C1012.96 388.368 1016.43 388.748 1019.61 389.527C1024.75 390.789 1029.77 392.331 1034.96 393.799C1040.11 395.256 1045.35 396.621 1050.76 397.456L1050.79 397.461L1050.82 397.465C1058.71 398.445 1065.35 397.965 1070.4 396.355C1075.43 394.753 1079.14 391.938 1080.63 388.085C1082.14 384.165 1081.11 379.792 1077.99 375.65C1074.88 371.535 1069.6 367.453 1062.05 363.764C1054.59 359.602 1046.34 356.644 1038.16 353.993C1029.9 351.315 1021.78 348.971 1014.32 345.99C1001.15 340.736 988.431 338.864 975.726 337.884C962.904 336.895 950.439 336.82 937.081 335.185C932.639 334.641 927.968 333.752 923.218 332.795C918.494 331.844 913.672 330.821 909.038 330.037L909.039 330.037C899.991 328.507 891.293 327.491 882.316 326.768C885.097 325.485 887.973 324.342 890.663 323.527L891.619 323.25C895.739 322.103 898.333 321.411 900.643 320.243C902.811 319.147 904.67 317.664 907.379 315.218L911.244 315.916L911.756 316.009L912.248 315.84C918.997 313.524 927.616 309.429 935.802 304.708C943.976 299.994 951.859 294.574 957.071 289.564C958.515 288.177 959.978 285.984 961.247 283.503C962.533 280.991 963.69 278.046 964.459 275.057C965.225 272.083 965.635 268.964 965.34 266.138C965.046 263.31 964.017 260.572 961.707 258.718L961.419 258.485L961.065 258.373Z" stroke="#0F0F0F" strokeWidth="4" />
+      </g>
+    </svg>
+  );
+}
+
+// ── WRIST IMAGE ────────────────────────────────────────────────────────────
+// User-uploaded wrist photo with drag-to-reposition, scale + rotation transforms.
+// Replaces the SVG WristReference. baseSize is the natural rendered width before scale,
+// so drag deltas in pixels translate cleanly into the same % units the slider produces.
+// ── DIAL IMAGE EDITOR ──────────────────────────────────────────────────────
+// Instagram-style inline cropper for the uploaded dial image. The dial face is round, so we mirror
+// that with a circular viewport. User pans with drag, zooms with wheel (desktop) or pinch (mobile);
+// rotation is handled by ±90° buttons. State (scale/offset/rotation) is owned by App and shared with
+// the live watch preview on the left — every adjustment updates both surfaces in real time.
+function DialImageEditor({
+  image, scale, rotation, offsetX, offsetY,
+  onScale, onRotation, onOffsetX, onOffsetY, onResetTransform,
+}: {
+  image: string;
+  scale: number; rotation: number; offsetX: number; offsetY: number;
+  onScale: (v: number) => void;
+  onRotation: (v: number) => void;
+  onOffsetX: (v: number) => void;
+  onOffsetY: (v: number) => void;
+  onResetTransform: () => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef({ x: 0, y: 0, ox: 0, oy: 0, active: false });
+  const clampOffset = (v: number) => Math.max(-60, Math.min(60, v));
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+    dragRef.current = { x: e.clientX, y: e.clientY, ox: offsetX, oy: offsetY, active: true };
+  };
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current.active) return;
+    const px = containerRef.current?.clientWidth || 1;
+    const dxPct = ((e.clientX - dragRef.current.x) / px) * 100;
+    const dyPct = ((e.clientY - dragRef.current.y) / px) * 100;
+    onOffsetX(clampOffset(dragRef.current.ox + dxPct));
+    onOffsetY(clampOffset(dragRef.current.oy + dyPct));
+  };
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    dragRef.current.active = false;
+    try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
+  };
+
+  return (
+    <div className="flex flex-col gap-3 bg-[#fafafa] border border-[#ede9e2] rounded-2xl p-4">
+      <div className="flex items-center justify-between">
+        <span className="uppercase tracking-wider text-[#666]" style={{ fontSize: 10, fontWeight: 700 }}>Adjust image</span>
+        <button
+          type="button"
+          onClick={onResetTransform}
+          className="text-[#888] hover:text-[#141414] transition-colors"
+          style={{ fontSize: 11, fontWeight: 600 }}
+        >
+          Reset
+        </button>
+      </div>
+      {/* Circular crop preview — drag to pan; zoom via the slider below */}
+      <div
+        ref={containerRef}
+        className="relative w-full aspect-square max-w-[280px] mx-auto rounded-full overflow-hidden bg-black select-none"
+        style={{ touchAction: "none", cursor: dragRef.current.active ? "grabbing" : "grab" }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+      >
+        <img
+          src={image}
+          alt="dial preview"
+          draggable={false}
+          className="absolute inset-0 size-full object-cover pointer-events-none"
+          style={{
+            transform: `translate(${offsetX}%, ${offsetY}%) scale(${scale / 100}) rotate(${rotation}deg)`,
+            transformOrigin: "center",
+          }}
+        />
+        {/* Subtle inset ring to communicate the circular crop boundary */}
+        <div className="absolute inset-0 pointer-events-none rounded-full" style={{ boxShadow: "inset 0 0 0 2px rgba(255,255,255,0.18)" }} />
+      </div>
+      {/* Zoom slider — replaces wheel/pinch zoom which felt unnatural in this context */}
+      <label className="flex flex-col gap-1">
+        <div className="flex items-center justify-between" style={{ fontSize: 12, fontWeight: 600 }}>
+          <span className="text-[#181612]">Zoom</span>
+          <span className="text-[#737373] tabular-nums">{scale}%</span>
+        </div>
+        <input
+          type="range"
+          min={50}
+          max={200}
+          step={1}
+          value={scale}
+          onChange={(e) => onScale(Number(e.target.value))}
+          className="w-full accent-[#111]"
+        />
+      </label>
+      {/* Rotation controls — Instagram doesn't have these in profile crop, but watch dials benefit */}
+      <div className="flex items-center justify-center gap-2">
+        <button
+          type="button"
+          onClick={() => onRotation(rotation - 90)}
+          className="size-9 rounded-full border border-[#ded9d1] text-[#444] hover:bg-black/5 active:scale-[0.96] transition-all flex items-center justify-center"
+          aria-label="Rotate -90°"
+          title="Rotate -90°"
+        >
+          <RotateCcw className="size-4" strokeWidth={2} />
+        </button>
+        <span className="text-[#737373] tabular-nums" style={{ fontSize: 11, fontWeight: 600, minWidth: 56, textAlign: "center" }}>{rotation}°</span>
+        <button
+          type="button"
+          onClick={() => onRotation(rotation + 90)}
+          className="size-9 rounded-full border border-[#ded9d1] text-[#444] hover:bg-black/5 active:scale-[0.96] transition-all flex items-center justify-center"
+          aria-label="Rotate +90°"
+          title="Rotate +90°"
+        >
+          <RotateCcw className="size-4 -scale-x-100" strokeWidth={2} />
+        </button>
+      </div>
+      <p className="text-[#9e9e9e] text-center" style={{ fontSize: 11 }}>Drag to move · Live preview on the watch</p>
+    </div>
+  );
+}
+
+function WristImage({
+  src, show, scale = 100, rotation = 0, offsetX = 0, offsetY = 0, onDrag, baseSize,
+}: {
+  src: string | null; show: boolean; scale?: number; rotation?: number;
+  offsetX?: number; offsetY?: number; onDrag?: (x: number, y: number) => void; baseSize: number;
+}) {
+  const dragRef = useRef({ x: 0, y: 0, ox: 0, oy: 0, active: false });
+  if (!src) return null;
+  const onPointerDown = (e: React.PointerEvent<HTMLImageElement>) => {
+    if (!onDrag) return;
+    (e.currentTarget as HTMLImageElement).setPointerCapture(e.pointerId);
+    dragRef.current = { x: e.clientX, y: e.clientY, ox: offsetX, oy: offsetY, active: true };
+  };
+  const onPointerMove = (e: React.PointerEvent<HTMLImageElement>) => {
+    if (!dragRef.current.active || !onDrag) return;
+    const dxPct = ((e.clientX - dragRef.current.x) / baseSize) * 100;
+    const dyPct = ((e.clientY - dragRef.current.y) / baseSize) * 100;
+    const clamp = (v: number) => Math.max(-150, Math.min(150, v));
+    onDrag(clamp(dragRef.current.ox + dxPct), clamp(dragRef.current.oy + dyPct));
+  };
+  const onPointerUp = (e: React.PointerEvent<HTMLImageElement>) => {
+    dragRef.current.active = false;
+    try { (e.currentTarget as HTMLImageElement).releasePointerCapture(e.pointerId); } catch {}
+  };
+  return (
+    <img
+      src={src}
+      alt="wrist"
+      draggable={false}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      style={{
+        position: "absolute",
+        left: "50%",
+        top: "50%",
+        width: baseSize,
+        height: "auto",
+        transform: `translate(-50%, -50%) translate(${offsetX}%, ${offsetY}%) scale(${scale / 100}) rotate(${rotation}deg)`,
+        transformOrigin: "center",
+        zIndex: 0,
+        opacity: show ? 1 : 0,
+        pointerEvents: show ? "auto" : "none",
+        transition: "opacity 0.5s cubic-bezier(0.32, 0.72, 0, 1)",
+        cursor: show && onDrag ? "grab" : undefined,
+        touchAction: "none",
+        userSelect: "none",
+      }}
+    />
   );
 }
 
@@ -233,93 +473,110 @@ function Navbar() {
 
 // ── SECTION ────────────────────────────────────────────────────────────────
 
-function Section({ title, hint, children, info, collapsible = false, defaultOpen = false }: {
+function Section({ title, hint, children, info, onInfoClick, collapsible = false, defaultOpen = false }: {
   title: string; hint?: string; children: React.ReactNode; info?: React.ReactNode;
+  onInfoClick?: (payload: { title: string; content: React.ReactNode }) => void;
   collapsible?: boolean; defaultOpen?: boolean;
 }) {
-  const [flipped, setFlipped] = useState(false);
   const [open, setOpen] = useState(!collapsible || defaultOpen);
   const rootRef = useRef<HTMLDivElement>(null);
   const handleToggle = () => {
     const wasOpen = open;
     setOpen(!wasOpen);
     if (!wasOpen) {
-      // After expanding, scroll the section to just below the sticky header(s) so the new content is visible
-      requestAnimationFrame(() => {
-        const el = rootRef.current;
-        if (!el) return;
-        const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
-        const stickyOffset = isDesktop ? 80 : 320;
-        const targetY = window.scrollY + el.getBoundingClientRect().top - stickyOffset;
-        window.scrollTo({ top: targetY, behavior: "smooth" });
-      });
+      // After expanding: wait 1s (let max-height/opacity transition finish + DOM settle so the new
+      // page height is accurate), then smooth-scroll all the way to the bottom.
+      setTimeout(() => {
+        const lenis = (window as unknown as {
+          __lenis?: {
+            scrollTo: (target: Element | number, opts?: { duration?: number; lock?: boolean }) => void;
+            resize?: () => void;
+          };
+        }).__lenis;
+        // Recompute the absolute page bottom right before scrolling — the collapse animation just
+        // changed the document height.
+        const docHeight = Math.max(
+          document.documentElement.scrollHeight,
+          document.body.scrollHeight,
+        );
+        const targetY = Math.max(0, docHeight - window.innerHeight);
+        if (lenis) {
+          // Refresh Lenis's cached dimensions so it knows the new scroll limit, then scroll to a
+          // number target (Lenis 1.3's scrollTo doesn't accept a "bottom" keyword — strings are
+          // treated as selectors and silently fail).
+          lenis.resize?.();
+          lenis.scrollTo(targetY, { duration: 0.9, lock: true });
+        } else {
+          window.scrollTo({ top: targetY, behavior: "smooth" });
+        }
+      }, 1000);
     }
   };
   return (
-    <div ref={rootRef} style={{ perspective: "1200px" }}>
+    <div ref={rootRef}>
       <div
-        className="relative transition-transform duration-500"
-        style={{ transformStyle: "preserve-3d", transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)" }}
+        className="bg-white/80 border border-[rgba(222,217,209,0.9)] rounded-[24px] w-full"
+        style={{ boxShadow: "0px 8px 12px rgba(0,0,0,0.04)" }}
       >
-        {/* Front face */}
-        <div
-          className="bg-white/80 border border-[rgba(222,217,209,0.9)] rounded-[24px] w-full"
-          style={{ boxShadow: "0px 8px 12px rgba(0,0,0,0.04)", backfaceVisibility: "hidden" }}
-        >
-          <div className={`px-6 ${collapsible && !open ? "py-4" : "pt-5 pb-1"} flex items-center justify-between gap-2`}>
-            <div className="flex items-baseline gap-3 min-w-0">
-              <span className="text-[#141414] tracking-[-0.8px]" style={{ fontSize: 20, fontWeight: 700 }}>{title}</span>
-              {hint && <span className="text-[#9e9e9e]" style={{ fontSize: 13, fontWeight: 600 }}>{hint}</span>}
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {info && (
-                <button
-                  type="button"
-                  onClick={() => setFlipped(true)}
-                  className="size-7 rounded-full border border-[#ddd5c8] text-[#b8ad9e] hover:text-[#141414] hover:border-[#888] transition-all flex items-center justify-center"
-                  aria-label={`About ${title}`}
-                >
-                  <Info className="size-3.5" />
-                </button>
-              )}
-              {collapsible && (
-                <button
-                  type="button"
-                  onClick={handleToggle}
-                  aria-expanded={open}
-                  aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
-                  className="size-7 rounded-full border border-[#ddd5c8] text-[#b8ad9e] hover:text-[#141414] hover:border-[#888] transition-all flex items-center justify-center"
-                >
-                  {open ? <Minus className="size-3.5" strokeWidth={2.5} /> : <Plus className="size-3.5" strokeWidth={2.5} />}
-                </button>
-              )}
-            </div>
+        <div className={`px-6 ${collapsible && !open ? "py-4" : "pt-5 pb-1"} flex items-center justify-between gap-2`}>
+          <div className="flex items-baseline gap-3 min-w-0">
+            <span className="text-[#141414] tracking-[-0.8px]" style={{ fontSize: 20, fontWeight: 700 }}>{title}</span>
+            {hint && <span className="text-[#9e9e9e]" style={{ fontSize: 13, fontWeight: 600 }}>{hint}</span>}
           </div>
-          {(!collapsible || open) && <div className="px-6 pb-6 pt-3">{children}</div>}
-        </div>
-
-        {/* Back face */}
-        {info && (
-          <div
-            className="info-scroll absolute inset-0 bg-[#faf9f6] border border-[rgba(222,217,209,0.9)] rounded-[24px] overflow-auto"
-            style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)", boxShadow: "0px 8px 12px rgba(0,0,0,0.04)" }}
-          >
-            <div className="px-6 pt-5 pb-2 flex items-center justify-between gap-2">
-              <span className="text-[#141414] tracking-[-0.6px]" style={{ fontSize: 17, fontWeight: 700 }}>{title}</span>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {info && (
               <button
                 type="button"
-                onClick={() => setFlipped(false)}
-                className="flex items-center gap-1.5 text-[#9e9e9e] hover:text-[#141414] transition-colors flex-shrink-0"
-                style={{ fontSize: 12, fontWeight: 600 }}
+                onClick={() => onInfoClick?.({ title, content: info })}
+                className="size-7 rounded-full border border-[#a39787] text-[#6d6354] hover:text-[#141414] hover:border-[#555] transition-all flex items-center justify-center"
+                aria-label={`About ${title}`}
               >
-                <span>←</span>
-                <span>Back</span>
+                <Info className="size-3.5" />
               </button>
-            </div>
-            <div className="px-6 pb-6 pt-3">{info}</div>
+            )}
+            {collapsible && (
+              <button
+                type="button"
+                onClick={handleToggle}
+                aria-expanded={open}
+                aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
+                className="size-7 rounded-full border border-[#a39787] text-[#6d6354] hover:text-[#141414] hover:border-[#555] transition-all flex items-center justify-center"
+              >
+                {open ? <Minus className="size-3.5" strokeWidth={2.5} /> : <Plus className="size-3.5" strokeWidth={2.5} />}
+              </button>
+            )}
           </div>
-        )}
+        </div>
+        {/* Keep children mounted so the collapse/expand animation runs both directions */}
+        <div
+          style={{
+            maxHeight: (!collapsible || open) ? "5000px" : "0px",
+            opacity: (!collapsible || open) ? 1 : 0,
+            overflow: "hidden",
+            transition: "max-height 0.5s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.35s cubic-bezier(0.32, 0.72, 0, 1)",
+          }}
+        >
+          <div className="px-6 pb-6 pt-3">{children}</div>
+        </div>
       </div>
+    </div>
+  );
+}
+
+// ── PREVIEW INFO PANEL ─────────────────────────────────────────────────────
+// Shown in the preview area (in place of watch + wrist) when a Section's info button is clicked.
+function PreviewInfoPanel({ title, content, onBack }: {
+  title: string; content: React.ReactNode; onBack: () => void;
+}) {
+  return (
+    <div className="info-scroll w-full h-full overflow-auto bg-[#faf9f6] border border-[rgba(222,217,209,0.9)] rounded-[24px]" style={{ boxShadow: "0px 8px 12px rgba(0,0,0,0.04)" }}>
+      <div className="px-6 pt-5 pb-2 flex items-center justify-between gap-2 sticky top-0 bg-[#faf9f6] z-10">
+        <span className="text-[#141414] tracking-[-0.6px]" style={{ fontSize: 20, fontWeight: 700 }}>{title}</span>
+        <button type="button" onClick={onBack} className="flex items-center gap-1.5 text-[#9e9e9e] hover:text-[#141414] transition-colors flex-shrink-0" style={{ fontSize: 13, fontWeight: 600 }}>
+          <span>←</span><span>Back</span>
+        </button>
+      </div>
+      <div className="px-6 pb-6 pt-3">{content}</div>
     </div>
   );
 }
@@ -710,24 +967,7 @@ function OrderReviewModal({
 function SuccessModal({ open, onClose, totalPrice }: { open: boolean; onClose: () => void; totalPrice: number }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }} onClick={onClose}>
-      <div className="bg-white rounded-[32px] w-full max-w-sm p-8 shadow-[0_32px_80px_rgba(0,0,0,0.35)] flex flex-col items-center gap-5 text-center" onClick={(e) => e.stopPropagation()}>
-        <div>
-          <h2 className="text-[#141414] tracking-[-1px]" style={{ fontSize: 26, fontWeight: 800 }}>Order Placed!</h2>
-          <p className="text-[#737373] mt-1" style={{ fontSize: 14 }}>Your CRAFTWATCH is being crafted.</p>
-        </div>
-        <div className="bg-[#f8f6f2] rounded-2xl px-6 py-4 w-full">
-          <p className="text-[#9e9e9e] uppercase tracking-widest mb-1" style={{ fontSize: 10, fontWeight: 700 }}>Total Charged</p>
-          <p className="text-[#141414] tracking-tighter" style={{ fontSize: 32, fontWeight: 800 }}>${totalPrice} USD</p>
-        </div>
-        <p className="text-[#9e9e9e]" style={{ fontSize: 12 }}>
-          Confirmation email on its way.<br />Estimated delivery: <strong className="text-[#141414]">4–6 weeks</strong>.
-        </p>
-        <button type="button" onClick={onClose} className="w-full h-11 rounded-full bg-[#111] text-white hover:bg-[#333] transition-colors" style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.05em" }}>
-          Continue Customizing
-        </button>
-      </div>
-    </div>
+<></>
   );
 }
 
@@ -759,16 +999,105 @@ export default function App() {
   const [showReview,    setShowReview]    = useState(false);
   const [showSuccess,   setShowSuccess]   = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  // Increments on every Reset click — re-keys the icon to retrigger the one-shot spin animation.
+  const [resetTick, setResetTick] = useState(0);
+  const handleResetClick = () => {
+    setResetTick((t) => t + 1);
+    setResetConfirmClosing(false);
+    setShowResetConfirm(true);
+  };
+  // Drives the exit animation for the confirm modal (Cancel / backdrop click / Reset confirm).
+  const [resetConfirmClosing, setResetConfirmClosing] = useState(false);
+  const closeResetConfirm = () => {
+    setResetConfirmClosing(true);
+    setTimeout(() => {
+      setShowResetConfirm(false);
+      setResetConfirmClosing(false);
+    }, 300);
+  };
   const [showWrist,     setShowWrist]     = useState(false);
-  const [wristStyle,    setWristStyle]    = useState<"skin" | "line">("skin");
+  const [activeInfo,    setActiveInfo]    = useState<{ title: string; content: React.ReactNode } | null>(null);
+  // Toggle: clicking the same section's info button while open will close the panel.
+  const handleInfoClick = (payload: { title: string; content: React.ReactNode }) => {
+    setActiveInfo((prev) => (prev?.title === payload.title ? null : payload));
+  };
+  // Keep the last info payload mounted briefly after closing so the exit transition can play.
+  const [lastInfo, setLastInfo] = useState<{ title: string; content: React.ReactNode } | null>(null);
+  useEffect(() => {
+    if (activeInfo) { setLastInfo(activeInfo); return; }
+    const t = setTimeout(() => setLastInfo(null), 1720);
+    return () => clearTimeout(t);
+  }, [activeInfo]);
+  const [wristImage,    setWristImage]    = useState<string | null>(null);
+  const [wristImageName, setWristImageName] = useState<string>("");
+  const [wristImageScale,    setWristImageScale]    = useState<number>(100);
+  const [wristImageRotation, setWristImageRotation] = useState<number>(0);
+  const [wristImageOffsetX,  setWristImageOffsetX]  = useState<number>(0);
+  const [wristImageOffsetY,  setWristImageOffsetY]  = useState<number>(0);
+  const resetWristImageTransform = () => {
+    setWristImageScale(100);
+    setWristImageRotation(0);
+    setWristImageOffsetX(0);
+    setWristImageOffsetY(0);
+  };
+
   const [showZoom,      setShowZoom]      = useState(false);
   const [hideBuyNow,    setHideBuyNow]    = useState(false);
   const [strapTab,      setStrapTab]      = useState("rubber");
 
   const fileRef            = useRef<HTMLInputElement>(null);
+  const wristFileRef       = useRef<HTMLInputElement>(null);
+  const wristImageRef      = useRef<string | null>(null);
+  const wristAdjustRef     = useRef<HTMLDivElement>(null);
+  useEffect(() => { return () => { if (wristImageRef.current) URL.revokeObjectURL(wristImageRef.current); }; }, []);
+  const handleWristFile = (file: File | null) => {
+    if (!file || !file.type.startsWith("image/")) return;
+    const url = URL.createObjectURL(file);
+    if (wristImageRef.current) URL.revokeObjectURL(wristImageRef.current);
+    wristImageRef.current = url;
+    setWristImage(url);
+    setWristImageName(file.name);
+    // Auto-enable Compare Size so the new photo is visible immediately on the preview.
+    setShowWrist(true);
+    // Auto-scroll DOWN to the Adjust panel — which only appears after upload — so the user can tweak right away.
+    requestAnimationFrame(() => {
+      wristAdjustRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  };
+  const clearWristImage = () => {
+    if (wristImageRef.current) { URL.revokeObjectURL(wristImageRef.current); wristImageRef.current = null; }
+    setWristImage(null);
+    setWristImageName("");
+    resetWristImageTransform();
+  };
   const dialImageRef       = useRef<string | null>(null);
   const buyNowSentinelRef  = useRef<HTMLDivElement>(null);
   useEffect(() => { return () => { if (dialImageRef.current) URL.revokeObjectURL(dialImageRef.current); }; }, []);
+
+  // Smooth scroll (Lenis) — ~400ms inertia, slightly snappier than Apple's default smooth scroll feel.
+  // Expose the instance on window so other components (e.g. Section auto-scroll on expand) can call
+  // lenis.scrollTo() — plain window.scrollTo() is intercepted by Lenis and won't move the page.
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 0.9,
+      easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -8 * t)),
+      smoothWheel: true,
+      wheelMultiplier: 1,
+      touchMultiplier: 2,
+    });
+    (window as unknown as { __lenis?: Lenis }).__lenis = lenis;
+    let rafId = 0;
+    const raf = (time: number) => {
+      lenis.raf(time);
+      rafId = requestAnimationFrame(raf);
+    };
+    rafId = requestAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(rafId);
+      lenis.destroy();
+      delete (window as unknown as { __lenis?: Lenis }).__lenis;
+    };
+  }, []);
 
   // Lock body scroll while mobile preview is in zoom (fullscreen) mode
   useEffect(() => {
@@ -851,10 +1180,13 @@ export default function App() {
 
   const handleReset = () => {
     if (dialImageRef.current) { URL.revokeObjectURL(dialImageRef.current); dialImageRef.current = null; }
+    if (wristImageRef.current) { URL.revokeObjectURL(wristImageRef.current); wristImageRef.current = null; }
     setCaseSize("40"); setCaseColor("black"); setDialTab("color"); setDialColor("cream");
     setDialImage(null); setDialImageName(""); setMarkerType("dots"); setMarkerColor("black");
     setHandsColor("silver"); setSecondsColor("red"); setPrimaryStrap("rubber-black"); setExtraStraps([]); setStrapTab("rubber");
+    setWristImage(null); setWristImageName(""); setShowWrist(false);
     resetDialImageTransform();
+    resetWristImageTransform();
   };
 
   const handleDialColorChange = (newColor: string) => {
@@ -1006,13 +1338,13 @@ export default function App() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setShowResetConfirm(true)}
+              onClick={handleResetClick}
               aria-hidden={isDefault}
               tabIndex={isDefault ? -1 : 0}
-              className={`group flex items-center gap-1.5 h-9 px-3.5 rounded-full border border-[#ddd5c8] text-[#666] hover:text-[#141414] hover:border-[#555] hover:bg-black/5 active:bg-black/5 transition-all flex-shrink-0 ${isDefault ? "opacity-0 pointer-events-none" : ""}`}
+              className={`group flex items-center gap-1.5 h-9 px-3.5 rounded-full border border-[#ddd5c8] text-[#666] hover:text-[#141414] hover:border-[#555] hover:bg-black/5 active:bg-black/5 active:scale-[0.97] transition-all flex-shrink-0 ${isDefault ? "opacity-0 pointer-events-none" : ""}`}
               aria-label="Reset all customizations"
             >
-              <RotateCcw className="size-3.5 transition-transform duration-500 group-hover:rotate-[-200deg]" />
+              <RotateCcw key={resetTick} className={`size-3.5 transition-transform duration-500 group-hover:rotate-[-200deg] ${resetTick > 0 ? "reset-click-spin" : ""}`} />
               <span style={{ fontSize: 13, fontWeight: 700 }}>Reset</span>
             </button>
             <button
@@ -1046,81 +1378,117 @@ export default function App() {
             transition: "height 0.6s cubic-bezier(0.32, 0.72, 0, 1), border-radius 0.6s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.6s cubic-bezier(0.32, 0.72, 0, 1)",
           }}
         >
-          {/* Wrist reference — scaled down on mobile (clipped by preview's overflow:hidden) */}
-          <WristReference show={showWrist} variant={wristStyle} zoom={0.4} />
-
-          {/* Watch cluster — all watches share the same absolute-centered position (mirrors desktop FLIP setup) */}
-          {CASE_SIZES.map((size) => {
-            const isActive = caseSize === size.id;
-            return (
-              <div
-                key={size.id}
-                className="flex justify-center"
-                style={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  zIndex: 1,
-                  visibility: isActive ? "visible" : "hidden",
-                  pointerEvents: isActive ? "auto" : "none",
-                }}
-              >
-                <div ref={(el) => { if (el) watchRefs2.current.set(size.id, el); else watchRefs2.current.delete(size.id); }}>
-                  <WatchPreview
-                    caseColor={caseColorHex} caseSize={size.id} dialColor={dialColorHex}
-                    dialImage={dialImage} handsColor={handsColorHex} secondsColor={secondsColorHex}
-                    markerColor={markerColorHex} markerType={markerType} strapColor={strapColorHex}
-                    strapMaterial={strapMaterial} scale={0.75}
-                    compactStrap={showWrist}
-                    dialImageScale={dialImageScale} dialImageRotation={dialImageRotation}
-                    dialImageOffsetX={dialImageOffsetX} dialImageOffsetY={dialImageOffsetY}
-                    onDialImageDrag={(x, y) => { setDialImageOffsetX(x); setDialImageOffsetY(y); }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Row 1 — Price (top-left) + GMT (top-right) */}
-          <div style={{ position: "absolute", left: 18, top: 16, zIndex: 30 }}>
-            <div className="uppercase text-[#737373] tracking-[1.4px]" style={{ fontSize: 10, fontWeight: 700 }}>Price</div>
-            <div className="flex items-baseline gap-1 mt-0.5">
-              <span className="text-[#111111]" style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.5px" }}>${totalPrice}</span>
-              <span className="text-[#737373]" style={{ fontSize: 10, fontWeight: 700 }}>USD</span>
-            </div>
-          </div>
-          <TimeDisplay style={{ position: "absolute", right: 16, top: 16, zIndex: 30 }} />
-
-          {/* Row 2 — Review and Order (bottom-left) + Compare Size (bottom-right) */}
-          <button
-            type="button"
-            onClick={() => setShowReview(true)}
-            className="flex items-center"
+          {/* Watch view layer — stays in place; info card layer (z-60) covers it when active */}
+          <div
+            className="absolute inset-0"
             style={{
-              position: "absolute", left: 18, bottom: 16, zIndex: 30,
-              background: "#111111", color: "#ffffff", borderRadius: 999, height: 30, padding: "0 18px",
-              fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", border: "none", cursor: "pointer",
-              opacity: hideBuyNow ? 0 : 1,
-              pointerEvents: hideBuyNow ? "none" : "auto",
-              transition: "opacity 0.3s ease",
+              pointerEvents: activeInfo ? "none" : "auto",
             }}
           >
-            Review and Order
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowWrist((v) => !v)}
-            aria-pressed={showWrist}
-            className={`absolute bottom-4 right-3 flex items-center justify-center h-[30px] px-3 rounded-full border transition-all ${
-              showWrist
-                ? "bg-[#111] text-white border-[#111]"
-                : "bg-white/80 backdrop-blur-sm text-[#666] border-[#ddd5c8] hover:text-[#141414]"
-            }`}
-            style={{ fontSize: 12, fontWeight: 700, zIndex: 30 }}
+            {/* Default Compare Size reference — hand outline. Hidden when user supplies their own photo. */}
+            <WristOutline show={showWrist && !wristImage} baseSize={520} />
+            {/* User-uploaded wrist photo (mobile) — overrides the outline */}
+            <WristImage
+              src={wristImage} show={showWrist} baseSize={400}
+              scale={wristImageScale} rotation={wristImageRotation}
+              offsetX={wristImageOffsetX} offsetY={wristImageOffsetY}
+              onDrag={(x, y) => { setWristImageOffsetX(x); setWristImageOffsetY(y); }}
+            />
+
+            {/* Watch cluster — all watches share the same absolute-centered position (mirrors desktop FLIP setup) */}
+            {CASE_SIZES.map((size) => {
+              const isActive = caseSize === size.id;
+              return (
+                <div
+                  key={size.id}
+                  className="flex justify-center"
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    transform: "translate(-50%, -50%)",
+                    zIndex: 1,
+                    visibility: isActive ? "visible" : "hidden",
+                    pointerEvents: isActive ? "auto" : "none",
+                  }}
+                >
+                  <div ref={(el) => { if (el) watchRefs2.current.set(size.id, el); else watchRefs2.current.delete(size.id); }}>
+                    <WatchPreview
+                      caseColor={caseColorHex} caseSize={size.id} dialColor={dialColorHex}
+                      dialImage={dialImage} handsColor={handsColorHex} secondsColor={secondsColorHex}
+                      markerColor={markerColorHex} markerType={markerType} strapColor={strapColorHex}
+                      strapMaterial={strapMaterial} scale={0.75}
+                      compactStrap={showWrist}
+                      dialImageScale={dialImageScale} dialImageRotation={dialImageRotation}
+                      dialImageOffsetX={dialImageOffsetX} dialImageOffsetY={dialImageOffsetY}
+                      onDialImageDrag={(x, y) => { setDialImageOffsetX(x); setDialImageOffsetY(y); }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Row 1 — Price (top-left) + GMT (top-right) */}
+            <div style={{ position: "absolute", left: 18, top: 16, zIndex: 30 }}>
+              <div className="uppercase text-[#737373] tracking-[1.4px]" style={{ fontSize: 10, fontWeight: 700 }}>Price</div>
+              <div className="flex items-baseline gap-1 mt-0.5">
+                <span className="text-[#111111]" style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.5px" }}>${totalPrice}</span>
+                <span className="text-[#737373]" style={{ fontSize: 10, fontWeight: 700 }}>USD</span>
+              </div>
+            </div>
+            <TimeDisplay style={{ position: "absolute", right: 16, top: 16, zIndex: 30 }} />
+
+            {/* Row 2 — Review and Order (bottom-left) + Compare Size (bottom-right) */}
+            <button
+              type="button"
+              onClick={() => setShowReview(true)}
+              className="flex items-center"
+              style={{
+                position: "absolute", left: 18, bottom: 16, zIndex: 30,
+                background: "#111111", color: "#ffffff", borderRadius: 999, height: 30, padding: "0 18px",
+                fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", border: "none", cursor: "pointer",
+                opacity: hideBuyNow ? 0 : 1,
+                pointerEvents: hideBuyNow ? "none" : "auto",
+                transition: "opacity 0.3s ease",
+              }}
+            >
+              Review and Order
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowWrist((v) => !v)}
+              aria-pressed={showWrist}
+              className={`absolute bottom-4 right-3 flex items-center justify-center h-[30px] px-3 rounded-full border transition-all ${
+                showWrist
+                  ? "bg-[#111] text-white border-[#111]"
+                  : "bg-white/80 backdrop-blur-sm text-[#666] border-[#ddd5c8] hover:text-[#141414]"
+              }`}
+              style={{ fontSize: 12, fontWeight: 700, zIndex: 30 }}
+            >
+              Compare size
+            </button>
+          </div>
+
+          {/* Info panel layer — wrapper always mounted so the initial translateY(-100%) commits to DOM
+              before activeInfo flips. Inner content uses activeInfo when open, falls back to lastInfo during exit. */}
+          <div
+            className="absolute inset-0 z-[60]"
+            style={{
+              transform: activeInfo ? "translateX(0%)" : "translateX(100%)",
+              opacity: activeInfo ? 1 : 0,
+              transition: "transform 0.7s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.45s cubic-bezier(0.32, 0.72, 0, 1)",
+              pointerEvents: activeInfo ? "auto" : "none",
+              willChange: "transform",
+            }}
           >
-            Compare size
-          </button>
+            {(activeInfo ?? lastInfo) && (
+              <PreviewInfoPanel
+                title={(activeInfo ?? lastInfo)!.title}
+                content={(activeInfo ?? lastInfo)!.content}
+                onBack={() => setActiveInfo(null)}
+              />
+            )}
+          </div>
         </div>
       </div>
 
@@ -1130,121 +1498,136 @@ export default function App() {
 
           {/* ── LEFT: sticky watch panel — watch + time only; heading moved above category sections ── */}
           <div
-            className="hidden lg:flex lg:w-[46%] flex-shrink-0 flex-col items-center justify-center py-10 pt-16"
+            className="hidden lg:flex lg:w-[46%] flex-shrink-0 flex-col items-center justify-center py-10 pt-16 relative"
             style={{ position: "sticky", top: 64, height: "calc(100vh - 64px)", alignSelf: "flex-start" }}
           >
-            <div className="flex flex-col items-center gap-3 w-full">
-              {/* Outer wrapper breaks out of LEFT panel — wider than panel so wrist can extend without being cropped */}
+            {/* Watch view — stays in place. The info card layer has an opaque bg and slides down OVER it,
+                so there is no need to also slide the watch/wrist away. */}
+            <div
+              className="flex flex-col items-center gap-3 w-full"
+              style={{
+                pointerEvents: activeInfo ? "none" : "auto",
+              }}
+            >
+                {/* Outer wrapper breaks out of LEFT panel — wider than panel so wrist can extend without being cropped */}
+                <div
+                  className="relative"
+                  style={{
+                    width: "calc(100% + 200px)",
+                    marginLeft: "-100px",
+                    marginRight: "-100px",
+                    overflow: "visible",
+                  }}
+                >
+                  {/* Default Compare Size reference — hand outline. Hidden when user supplies their own photo. */}
+                  <WristOutline show={showWrist && !wristImage} baseSize={1100} />
+                  {/* User-uploaded wrist photo (desktop) — overrides the outline */}
+                  <WristImage
+                    src={wristImage} show={showWrist} baseSize={800}
+                    scale={wristImageScale} rotation={wristImageRotation}
+                    offsetX={wristImageOffsetX} offsetY={wristImageOffsetY}
+                    onDrag={(x, y) => { setWristImageOffsetX(x); setWristImageOffsetY(y); }}
+                  />
+                  {/* Active watch is in flow (drives wrapper's natural height). Inactive ones are
+                      absolute at the SAME top:0 position with the same flex centering — so swapping
+                      active produces no visible layout shift, only a FLIP scale of the new watch. */}
+                  {CASE_SIZES.map((size) => {
+                    const isActive = caseSize === size.id;
+                    return (
+                      <div
+                        key={size.id}
+                        className="flex justify-center"
+                        style={isActive
+                          ? { position: "relative", zIndex: 1, pointerEvents: "none" }
+                          : { position: "absolute", top: 0, left: 0, right: 0, zIndex: 1, visibility: "hidden", pointerEvents: "none" }
+                        }
+                      >
+                        <div
+                          ref={(el) => { if (el) watchRefs1.current.set(size.id, el); else watchRefs1.current.delete(size.id); }}
+                          style={{ pointerEvents: "auto" }}
+                        >
+                          <WatchPreview
+                            caseColor={caseColorHex}
+                            caseSize={size.id}
+                            dialColor={dialColorHex}
+                            dialImage={dialImage}
+                            handsColor={handsColorHex}
+                            secondsColor={secondsColorHex}
+                            markerColor={markerColorHex}
+                            markerType={markerType}
+                            strapColor={strapColorHex}
+                            strapMaterial={strapMaterial}
+                            scale={1.32}
+                            compactStrap={showWrist}
+                            dialImageScale={dialImageScale}
+                            dialImageRotation={dialImageRotation}
+                            dialImageOffsetX={dialImageOffsetX}
+                            dialImageOffsetY={dialImageOffsetY}
+                            onDialImageDrag={(x, y) => { setDialImageOffsetX(x); setDialImageOffsetY(y); }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <ExtrasPillRow extras={extraStraps} className="flex-shrink-0" />
+                <TimeDisplay className="flex-shrink-0" />
+              </div>
+              {/* Bottom toolbar — stays in place; info card layer (z-60) covers it when active */}
               <div
-                className="relative"
+                className="absolute flex items-end justify-between gap-4"
                 style={{
-                  width: "calc(100% + 200px)",
-                  marginLeft: "-100px",
-                  marginRight: "-100px",
-                  overflow: "visible",
+                  bottom: 64, left: 20, right: 20, zIndex: 50,
+                  pointerEvents: activeInfo ? "none" : "auto",
                 }}
               >
-                {/* Wrist reference — positioned absolute, centers on the watch via the relative wrapper */}
-                <WristReference show={showWrist} variant={wristStyle} zoom={0.9} />
-                {/* Active watch is in flow (drives wrapper's natural height). Inactive ones are
-                    absolute at the SAME top:0 position with the same flex centering — so swapping
-                    active produces no visible layout shift, only a FLIP scale of the new watch. */}
-                {CASE_SIZES.map((size) => {
-                  const isActive = caseSize === size.id;
-                  return (
-                    <div
-                      key={size.id}
-                      className="flex justify-center"
-                      style={isActive
-                        ? { position: "relative", zIndex: 1, pointerEvents: "none" }
-                        : { position: "absolute", top: 0, left: 0, right: 0, zIndex: 1, visibility: "hidden", pointerEvents: "none" }
-                      }
-                    >
-                      <div
-                        ref={(el) => { if (el) watchRefs1.current.set(size.id, el); else watchRefs1.current.delete(size.id); }}
-                        style={{ pointerEvents: "auto" }}
-                      >
-                        <WatchPreview
-                          caseColor={caseColorHex}
-                          caseSize={size.id}
-                          dialColor={dialColorHex}
-                          dialImage={dialImage}
-                          handsColor={handsColorHex}
-                          secondsColor={secondsColorHex}
-                          markerColor={markerColorHex}
-                          markerType={markerType}
-                          strapColor={strapColorHex}
-                          strapMaterial={strapMaterial}
-                          scale={1.32}
-                          compactStrap={showWrist}
-                          dialImageScale={dialImageScale}
-                          dialImageRotation={dialImageRotation}
-                          dialImageOffsetX={dialImageOffsetX}
-                          dialImageOffsetY={dialImageOffsetY}
-                          onDialImageDrag={(x, y) => { setDialImageOffsetX(x); setDialImageOffsetY(y); }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <ExtrasPillRow extras={extraStraps} className="flex-shrink-0" />
-              <TimeDisplay className="flex-shrink-0" />
-            </div>
-            {/* Bottom toolbar — 2 sections justified between: Price | (Skin/Line + Compare + Zoom) */}
-            <div className="absolute flex items-end justify-between gap-4" style={{ bottom: 64, left: 20, right: 20, zIndex: 50 }}>
-              {/* Section 1 — Price */}
-              <div>
-                <p className="text-[#9e9e9e] uppercase tracking-widest" style={{ fontSize: 9, fontWeight: 700 }}>Price</p>
-                <div className="flex items-baseline gap-1 mt-0.5">
-                  <span className="text-[#141414] tracking-tighter" style={{ fontSize: 36, fontWeight: 800 }}>${totalPrice}</span>
-                  <span className="text-[#737373]" style={{ fontSize: 11, fontWeight: 600 }}>USD</span>
+                <div>
+                  <p className="text-[#9e9e9e] uppercase tracking-widest" style={{ fontSize: 9, fontWeight: 700 }}>Price</p>
+                  <div className="flex items-baseline gap-1 mt-0.5">
+                    <span className="text-[#141414] tracking-tighter" style={{ fontSize: 36, fontWeight: 800 }}>${totalPrice}</span>
+                    <span className="text-[#737373]" style={{ fontSize: 11, fontWeight: 600 }}>USD</span>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setShowWrist((w) => !w)}
+                  aria-pressed={showWrist}
+                  className={`w-[160px] flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-full border transition-all flex-shrink-0 ${
+                    showWrist
+                      ? "bg-[#111] text-white border-[#111]"
+                      : "border-[#ddd5c8] bg-white/70 backdrop-blur-sm text-[#666] hover:text-[#141414] hover:border-[#555] hover:bg-white"
+                  }`}
+                  aria-label="Toggle wrist photo overlay"
+                >
+                  <span style={{ fontSize: 13, fontWeight: 700 }}>Compare size</span>
+                </button>
               </div>
 
-              {/* Section 2 — Skin/Line + Compare size + Zoom (stacked column) */}
-              <div className="flex flex-col items-end gap-2">
-              {showWrist && (
-                <div className="flex w-[160px] items-center gap-1 rounded-full border border-[#ddd5c8] bg-white/70 backdrop-blur-sm p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setWristStyle("skin")}
-                    aria-pressed={wristStyle === "skin"}
-                    className={`flex-1 h-8 rounded-full transition-colors ${wristStyle === "skin" ? "bg-[#111] text-white" : "text-[#666] hover:text-[#141414] hover:bg-black/5"}`}
-                    style={{ fontSize: 12, fontWeight: 700 }}
-                  >
-                    Skin
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setWristStyle("line")}
-                    aria-pressed={wristStyle === "line"}
-                    className={`flex-1 h-8 rounded-full transition-colors ${wristStyle === "line" ? "bg-[#111] text-white" : "text-[#666] hover:text-[#141414] hover:bg-black/5"}`}
-                    style={{ fontSize: 12, fontWeight: 700 }}
-                  >
-                    Line
-                  </button>
-                </div>
+            {/* Info panel layer — wrapper always mounted; uses the full LEFT panel area so the card has
+                maximum vertical room for content scrolling */}
+            <div
+              className="absolute inset-0 z-[60] p-4 pt-20"
+              style={{
+                transform: activeInfo ? "translateX(0%)" : "translateX(120%)",
+                opacity: activeInfo ? 1 : 0,
+                transition: "transform 0.7s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.45s cubic-bezier(0.32, 0.72, 0, 1)",
+                pointerEvents: activeInfo ? "auto" : "none",
+                willChange: "transform",
+              }}
+            >
+              {(activeInfo ?? lastInfo) && (
+                <PreviewInfoPanel
+                  title={(activeInfo ?? lastInfo)!.title}
+                  content={(activeInfo ?? lastInfo)!.content}
+                  onBack={() => setActiveInfo(null)}
+                />
               )}
-              <button
-                type="button"
-                onClick={() => setShowWrist((w) => !w)}
-                aria-pressed={showWrist}
-                className={`w-[160px] flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-full border transition-all flex-shrink-0 ${
-                  showWrist
-                    ? "bg-[#111] text-white border-[#111]"
-                    : "border-[#ddd5c8] bg-white/70 backdrop-blur-sm text-[#666] hover:text-[#141414] hover:border-[#555] hover:bg-white"
-                }`}
-                aria-label="Toggle wrist size reference"
-              >
-                <span style={{ fontSize: 13, fontWeight: 700 }}>Compare size</span>
-              </button>
-              </div>
             </div>
           </div>
 
-          {/* ── RIGHT: natural page flow ── */}
-          <div className="lg:w-[54%] flex-shrink-0 lg:pr-1">
+          {/* ── RIGHT: natural page flow. relative+z-10 lifts the cards above any wrist photo overflow,
+              but the column itself has NO bg so the photo shows through the spacing/gaps between cards. ── */}
+          <div className="lg:w-[54%] flex-shrink-0 lg:pr-1 relative z-10">
             <div className="flex flex-col gap-3 pt-4 pb-4 lg:pt-20">
 
               {/* Heading + Reset — desktop only (mobile renders its own copy above the sticky preview) */}
@@ -1257,18 +1640,18 @@ export default function App() {
                 </h1>
                 <button
                   type="button"
-                  onClick={() => setShowResetConfirm(true)}
+                  onClick={handleResetClick}
                   aria-hidden={isDefault}
                   tabIndex={isDefault ? -1 : 0}
-                  className={`group flex items-center gap-1.5 h-9 px-3.5 rounded-full border border-[#ddd5c8] text-[#666] hover:text-[#141414] hover:border-[#555] hover:bg-black/5 active:bg-black/5 transition-all flex-shrink-0 ${isDefault ? "opacity-0 pointer-events-none" : ""}`}
+                  className={`group flex items-center gap-1.5 h-9 px-3.5 rounded-full border border-[#ddd5c8] text-[#666] hover:text-[#141414] hover:border-[#555] hover:bg-black/5 active:bg-black/5 active:scale-[0.97] transition-all flex-shrink-0 ${isDefault ? "opacity-0 pointer-events-none" : ""}`}
                   aria-label="Reset all customizations"
                 >
-                  <RotateCcw className="size-3.5 transition-transform duration-500 group-hover:rotate-[-200deg]" />
+                  <RotateCcw key={resetTick} className={`size-3.5 transition-transform duration-500 group-hover:rotate-[-200deg] ${resetTick > 0 ? "reset-click-spin" : ""}`} />
                   <span style={{ fontSize: 13, fontWeight: 700 }}>Reset</span>
                 </button>
               </div>
 
-              <Section title="Case Size" info={caseSizeInfoPanel}>
+              <Section title="Case Size" info={caseSizeInfoPanel} onInfoClick={handleInfoClick}>
                 {/* Mobile: card grid (2x2 for 4 sizes) */}
                 <div className="lg:hidden grid grid-cols-2 gap-3">
                   {CASE_SIZES.map((size) => {
@@ -1306,13 +1689,14 @@ export default function App() {
                 <div className="hidden lg:block">
                   <PillRow options={CASE_SIZES} value={caseSize} onChange={setCaseSize} />
                 </div>
+                {/* Sizing guide — wrap a tape/string around the wrist for ~10s to measure, then pick a size from this guide */}
               </Section>
 
-              <Section title="Case Color" info={caseColorInfoPanel}>
+              <Section title="Case Color" info={caseColorInfoPanel} onInfoClick={handleInfoClick}>
                 <SwatchRow options={CASE_COLORS} value={caseColor} onSelect={setCaseColor} />
               </Section>
 
-              <Section title="Dial Face" info={dialFaceInfoPanel}>
+              <Section title="Dial Face" info={dialFaceInfoPanel} onInfoClick={handleInfoClick}>
                 <div className="bg-[#fafafa] border border-[#e9eaeb] rounded-full p-1 flex w-full mb-4">
                   {(["color", "upload"] as const).map((t) => (
                     <button key={t} type="button" onClick={() => setDialTab(t)}
@@ -1339,51 +1723,19 @@ export default function App() {
                           <div className="flex-1 text-center text-black tracking-[-0.04em] truncate" style={{ fontSize: 16 }}>{dialImageName || "uploaded.png"}</div>
                           <button type="button" onClick={clearImage} className="size-9 flex items-center justify-center text-[#33363F] hover:bg-black/5 rounded-full" aria-label="Remove image"><X className="size-4" strokeWidth={2.5} /></button>
                         </div>
-                        {/* Image transform controls — scale, rotation; drag the watch dial to reposition */}
-                        <div className="flex flex-col gap-3 bg-[#fafafa] border border-[#ede9e2] rounded-2xl px-4 py-3">
-                          <div className="flex items-center justify-between">
-                            <span className="uppercase tracking-wider text-[#666]" style={{ fontSize: 10, fontWeight: 700 }}>Adjust image</span>
-                            <button
-                              type="button"
-                              onClick={resetDialImageTransform}
-                              className="text-[#888] hover:text-[#141414] transition-colors"
-                              style={{ fontSize: 11, fontWeight: 600 }}
-                            >
-                              Reset
-                            </button>
-                          </div>
-                          <label className="flex flex-col gap-1">
-                            <div className="flex items-center justify-between" style={{ fontSize: 12, fontWeight: 600 }}>
-                              <span className="text-[#181612]">Zoom</span>
-                              <span className="text-[#737373]">{dialImageScale}%</span>
-                            </div>
-                            <input
-                              type="range"
-                              min={50}
-                              max={200}
-                              step={1}
-                              value={dialImageScale}
-                              onChange={(e) => setDialImageScale(Number(e.target.value))}
-                              className="w-full accent-[#111]"
-                            />
-                          </label>
-                          <label className="flex flex-col gap-1">
-                            <div className="flex items-center justify-between" style={{ fontSize: 12, fontWeight: 600 }}>
-                              <span className="text-[#181612]">Rotation</span>
-                              <span className="text-[#737373]">{dialImageRotation}°</span>
-                            </div>
-                            <input
-                              type="range"
-                              min={-180}
-                              max={180}
-                              step={1}
-                              value={dialImageRotation}
-                              onChange={(e) => setDialImageRotation(Number(e.target.value))}
-                              className="w-full accent-[#111]"
-                            />
-                          </label>
-                          <p className="text-[#9e9e9e]" style={{ fontSize: 11 }}>Drag the image on the dial preview to reposition.</p>
-                        </div>
+                        {/* Instagram-style inline cropper — replaces the 4 sliders. Live preview on the watch. */}
+                        <DialImageEditor
+                          image={dialImage}
+                          scale={dialImageScale}
+                          rotation={dialImageRotation}
+                          offsetX={dialImageOffsetX}
+                          offsetY={dialImageOffsetY}
+                          onScale={setDialImageScale}
+                          onRotation={setDialImageRotation}
+                          onOffsetX={setDialImageOffsetX}
+                          onOffsetY={setDialImageOffsetY}
+                          onResetTransform={resetDialImageTransform}
+                        />
                       </>
                     ) : (
                       <button type="button" onClick={() => fileRef.current?.click()} className="bg-white/75 border border-dashed border-[#bfb8ad] rounded-[10px] px-5 py-5 flex items-center justify-center gap-3 text-black hover:bg-white" style={{ fontSize: 18 }}>
@@ -1395,7 +1747,7 @@ export default function App() {
                 )}
               </Section>
 
-              <Section title="Hour Marker Type" info={hourMarkerTypeInfoPanel}>
+              <Section title="Hour Marker Type" info={hourMarkerTypeInfoPanel} onInfoClick={handleInfoClick}>
                 <div className={imageUploaded ? "opacity-60 pointer-events-none" : ""}>
                   <div className="grid grid-cols-2 lg:flex lg:flex-wrap items-start gap-3">
                     {[
@@ -1429,7 +1781,7 @@ export default function App() {
                 )}
               </Section>
 
-              <Section title="Hour Marker Colors" info={hourMarkerColorInfoPanel}>
+              <Section title="Hour Marker Colors" info={hourMarkerColorInfoPanel} onInfoClick={handleInfoClick}>
                 <div className={imageUploaded ? "opacity-60 pointer-events-none" : ""}>
                   <SwatchRow
                     options={METAL_COLORS} value={markerColor} onSelect={setMarkerColor}
@@ -1447,7 +1799,7 @@ export default function App() {
                 {imageUploaded && <p className="mt-2 text-[#9e9e9e]" style={{ fontSize: 13 }}>Not shown with a custom dial image.</p>}
               </Section>
 
-              <Section title="Hands Color" info={handsColorInfoPanel}>
+              <Section title="Hands Color" info={handsColorInfoPanel} onInfoClick={handleInfoClick}>
                 <SwatchRow
                   options={METAL_COLORS} value={handsColor} onSelect={setHandsColor}
                   disabledIds={disabledMetalColors}
@@ -1462,15 +1814,15 @@ export default function App() {
                   )}
               </Section>
 
-              <Section title="Seconds Hand Color" info={secondsColorInfoPanel}>
+              <Section title="Seconds Hand Color" info={secondsColorInfoPanel} onInfoClick={handleInfoClick}>
                 <SwatchRow options={SECONDS_COLORS} value={secondsColor} onSelect={setSecondsColor} />
               </Section>
 
               {/* ── Main Strap: all materials grouped on one page; tap a swatch to set as primary ── */}
-              <Section title="Main Strap" info={strapInfoPanel}>
+              <Section title="Main Strap" info={strapInfoPanel} onInfoClick={handleInfoClick}>
                 <div className="flex flex-col gap-5">
-                  {STRAP_GROUPS.map((group) => (
-                    <div key={group.id}>
+                  {STRAP_GROUPS.map((group, idx) => (
+                    <div key={group.id} className={idx > 0 ? "pt-5 border-t border-black/10" : ""}>
                       <div className="flex items-center justify-between mb-2 px-1">
                         <span className="text-[#181612] uppercase tracking-[0.14em]" style={{ fontSize: 11, fontWeight: 700 }}>{group.label}</span>
                         <span className={`${group.price === "Included" ? "text-[#9e9e9e]" : "text-[#181612]"}`} style={{ fontSize: 11, fontWeight: 600 }}>{group.price}</span>
@@ -1500,23 +1852,16 @@ export default function App() {
                   ))}
                 </div>
                 {/* Selected indicator */}
-                <div className="mt-4 flex items-center gap-2 px-3 py-2 rounded-xl bg-[#f0ece4] border border-[#e2ddd1]">
-                  <span className="text-[#666] uppercase tracking-wider" style={{ fontSize: 10, fontWeight: 700 }}>Main</span>
-                  <div className="rounded-full size-4 ring-1 ring-black/10" style={{ background: strapColorHex }} />
-                  <span className="text-[#181612]" style={{ fontSize: 12, fontWeight: 600 }}>
-                    {strapMaterial.charAt(0).toUpperCase() + strapMaterial.slice(1)} · {strapInfo?.label ?? ""}
-                  </span>
-                </div>
               </Section>
 
               {/* ── Additional Straps: collapsible card (Section handles the +/− toggle in the header) ── */}
               <Section title="Additional Straps" collapsible>
                 <p className="text-[#9e9e9e] mb-3 px-1" style={{ fontSize: 13 }}>Order extra straps to swap later. Each is sold separately and priced by material.</p>
                 <div className="flex flex-col gap-5">
-                      {STRAP_GROUPS.map((group) => {
+                      {STRAP_GROUPS.map((group, idx) => {
                         const perEach = extraStrapUnitPrice(group.colors[0]?.id ?? "");
                         return (
-                          <div key={group.id}>
+                          <div key={group.id} className={idx > 0 ? "pt-5 border-t border-black/10" : ""}>
                             <div className="flex items-center justify-between mb-2 px-1">
                               <span className="text-[#181612] uppercase tracking-[0.14em]" style={{ fontSize: 11, fontWeight: 700 }}>{group.label}</span>
                               <span className="text-[#181612]" style={{ fontSize: 11, fontWeight: 600 }}>+${perEach}/each</span>
@@ -1609,12 +1954,12 @@ export default function App() {
 
       {showResetConfirm && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+          className={`${resetConfirmClosing ? "reset-backdrop-out" : "reset-backdrop-in"} fixed inset-0 z-[60] flex items-center justify-center p-4`}
           style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(5px)" }}
-          onClick={() => setShowResetConfirm(false)}
+          onClick={closeResetConfirm}
         >
           <div
-            className="bg-white rounded-[24px] w-full max-w-sm p-6 shadow-[0_24px_60px_rgba(0,0,0,0.25)] flex flex-col gap-4"
+            className={`${resetConfirmClosing ? "reset-modal-out" : "reset-modal-in"} bg-white rounded-[24px] w-full max-w-sm p-6 shadow-[0_24px_60px_rgba(0,0,0,0.25)] flex flex-col gap-4`}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex flex-col gap-1.5 text-center">
@@ -1624,16 +1969,16 @@ export default function App() {
             <div className="flex items-center gap-2 mt-2">
               <button
                 type="button"
-                onClick={() => setShowResetConfirm(false)}
-                className="flex-1 h-11 rounded-full border border-[#ded9d1] text-[#141414] hover:bg-black/5 transition"
+                onClick={closeResetConfirm}
+                className="flex-1 h-11 rounded-full border border-[#ded9d1] text-[#141414] hover:bg-black/5 active:scale-[0.97] transition-all"
                 style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.02em" }}
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={() => { handleReset(); setShowResetConfirm(false); }}
-                className="flex-1 h-11 rounded-full bg-[#111] text-white hover:bg-[#333] active:scale-[0.98] transition-all"
+                onClick={() => { handleReset(); closeResetConfirm(); }}
+                className="flex-1 h-11 rounded-full bg-[#111] text-white hover:bg-[#333] active:scale-[0.97] transition-all"
                 style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.02em" }}
               >
                 Reset

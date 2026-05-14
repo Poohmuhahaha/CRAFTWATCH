@@ -24,6 +24,70 @@ html {
   background: rgba(0, 0, 0, 0.28);
 }
 
+/* Desktop-only text size bump — adds 2px to every inline font-size and known Tailwind text-size classes.
+   Uses attribute substring/end selectors to catch React's serialized inline styles in both
+   single-property and multi-property forms. Source order = largest first so substring matches
+   don't bleed into smaller values. */
+@media (min-width: 1024px) {
+  [style*="font-size: 36px;"], [style$="font-size: 36px"] { font-size: 38px !important; }
+  [style*="font-size: 32px;"], [style$="font-size: 32px"] { font-size: 34px !important; }
+  [style*="font-size: 26px;"], [style$="font-size: 26px"] { font-size: 28px !important; }
+  [style*="font-size: 24px;"], [style$="font-size: 24px"] { font-size: 26px !important; }
+  [style*="font-size: 22px;"], [style$="font-size: 22px"] { font-size: 24px !important; }
+  [style*="font-size: 20px;"], [style$="font-size: 20px"] { font-size: 22px !important; }
+  [style*="font-size: 18px;"], [style$="font-size: 18px"] { font-size: 20px !important; }
+  [style*="font-size: 17px;"], [style$="font-size: 17px"] { font-size: 19px !important; }
+  [style*="font-size: 16px;"], [style$="font-size: 16px"] { font-size: 18px !important; }
+  [style*="font-size: 15px;"], [style$="font-size: 15px"] { font-size: 17px !important; }
+  [style*="font-size: 14px;"], [style$="font-size: 14px"] { font-size: 16px !important; }
+  [style*="font-size: 13px;"], [style$="font-size: 13px"] { font-size: 15px !important; }
+  [style*="font-size: 12px;"], [style$="font-size: 12px"] { font-size: 14px !important; }
+  [style*="font-size: 11px;"], [style$="font-size: 11px"] { font-size: 13px !important; }
+  [style*="font-size: 10px;"], [style$="font-size: 10px"] { font-size: 12px !important; }
+  [style*="font-size: 9px;"],  [style$="font-size: 9px"]  { font-size: 11px !important; }
+  /* Tailwind text-size utility classes used in the app */
+  .text-\[34px\] { font-size: 36px !important; }
+  .text-\[28px\] { font-size: 30px !important; }
+  .text-\[9px\]  { font-size: 11px !important; }
+  .text-\[8px\]  { font-size: 10px !important; }
+  .text-xs       { font-size: 14px !important; }
+  .text-sm       { font-size: 16px !important; }
+}
+
+/* Reset button click — icon snaps in with a press + full spin + slight overshoot */
+@keyframes resetSpinOnce {
+  0%   { transform: rotate(0deg) scale(1); }
+  18%  { transform: rotate(-30deg) scale(0.82); }
+  100% { transform: rotate(-360deg) scale(1); }
+}
+.reset-click-spin {
+  animation: resetSpinOnce 0.65s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Reset confirm modal pop-in: backdrop fades, card scales/lifts in */
+@keyframes resetBackdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes resetModalIn {
+  0%   { opacity: 0; transform: scale(0.9) translateY(12px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.reset-backdrop-in { animation: resetBackdropIn 0.28s ease-out both; }
+.reset-modal-in    { animation: resetModalIn 0.38s cubic-bezier(0.32, 0.72, 0, 1) both; }
+
+/* Reverse animations for cancel/close — backdrop fades back to 0, card scales down + drifts away */
+@keyframes resetBackdropOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+@keyframes resetModalOut {
+  0%   { opacity: 1; transform: scale(1) translateY(0); }
+  100% { opacity: 0; transform: scale(0.92) translateY(10px); }
+}
+.reset-backdrop-out { animation: resetBackdropOut 0.25s ease-in both; }
+.reset-modal-out    { animation: resetModalOut 0.3s cubic-bezier(0.32, 0.72, 0, 1) both; }
+
 /* Info container (Section back face) — slim, padded scrollbar that doesn't crowd the rounded corner */
 .info-scroll {
   scrollbar-width: thin;
