@@ -191,7 +191,19 @@ function WristReference({ show, zoom = 1, variant = "skin" }: { show: boolean; z
 // Designer-provided hand + forearm silhouette. Source SVG is 1132×678 but the actual
 // drawing only spans roughly y=160–551, so we crop the viewBox vertically to remove
 // empty padding. Wrist sits near x≈740 → shift left so it lands on the preview centre.
-function WristOutline({ show, baseSize }: { show: boolean; baseSize: number }) {
+function WristOutline({
+  show,
+  baseSize,
+  left = "80%",
+  top = "35%",
+  shiftXPct,
+}: {
+  show: boolean;
+  baseSize: number;
+  left?: string;
+  top?: string;
+  shiftXPct?: number;
+}) {
   const uid = useId().replace(/:/g, "");
   const filterId = `wo-filter-${uid}`;
   const fadeGradId = `wo-fadegrad-${uid}`;
@@ -200,12 +212,15 @@ function WristOutline({ show, baseSize }: { show: boolean; baseSize: number }) {
   const VB_Y = 130;
   const VB_H = 430;
   const WRIST_X = 740; // approximate wrist position inside the source viewBox
-  const shiftPct = ((SVG_W / 2) - WRIST_X) / SVG_W * 100; // negative = shift left
+  // Default shift drags the element so the conceptual wrist (off the right edge of viewBox)
+  // lands at `left%`. Callers in narrow/clipped containers can override (e.g. 0 to keep the
+  // visible forearm centered on the placement point instead of shifting it offscreen).
+  const shiftPct = shiftXPct ?? ((SVG_W / 2) - WRIST_X) / SVG_W * 100;
   return (
     <svg
       className="absolute pointer-events-none"
       style={{
-        left: "80%", top: "22%",
+        left, top,
         transform: `translate(-50%, -50%) translateX(${shiftPct}%)`,
         zIndex: 0,
         opacity: show ? 1 : 0,
